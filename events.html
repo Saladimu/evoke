@@ -15,13 +15,27 @@
 </head>
 <body>
     <!-- Top Menu Bar -->
-   <div class="nav-bar">
-    <a href="index.html">📊 Hasil Lomba</a>
-    <a href="events.html">🗓 Kalender Lomba</a>
-    <a href="feedback.html">📩 Feedback </a>
-</div>
+    <div class="nav-bar">
+        <a href="index.html">📊 Hasil Lomba</a>
+        <a href="events.html" style="color: #007bff;">🗓 Kalender Lomba</a> <!-- Highlighted active tab -->
+        <a href="feedback.html">📩 Feedback </a>
+    </div>
 
-    <!-- Your Tally Form Embedded -->
-    <iframe src="https://www.appsheet.com/start/6ebd3094-b4f7-45cc-ba70-698e89d4df68?platform=desktop#appName=CalendarEvoke-110568804&vss=H4sIAAAAAAAAA62PvQrCMBRGX0W-uU-QVRxUdLG4GIfY3EowTaRJrSXk3b31B3EtjjmXc_iScDPU76KqLhCH9H2taYBAkiiHK0kIibl3sfVWopDYquYFV0r3ys5K5bRxZ4mMfCw-lUgBIk2JiH8sKWA0uWhqQ-1YHH0uvW0-jy6DXxO5QNNFdbL0_AKbOTOrfdUF0nueNXlOWLrF_cpo4zWHa2UD5QdQ5Nd9gwEAAA==&view=Jadwal%20Tanding"></iframe>
+    <!-- The iframe starts empty to prevent history corruption -->
+    <iframe id="appsheet-frame"></iframe>
+
+    <script>
+        window.onload = function() {
+            const iframe = document.getElementById('appsheet-frame');
+            
+            // Your exact AppSheet URL placed inside JavaScript
+            const appsheetUrl = "https://www.appsheet.com/start/6ebd3094-b4f7-45cc-ba70-698e89d4df68?platform=desktop#appName=CalendarEvoke-110568804&vss=H4sIAAAAAAAAA62PvQrCMBRGX0W-uU-QVRxUdLG4GIfY3EowTaRJrSXk3b31B3EtjjmXc_iScDPU76KqLhCH9H2taYBAkiiHK0kIibl3sfVWopDYquYFV0r3ys5K5bRxZ4mMfCw-lUgBIk2JiH8sKWA0uWhqQ-1YHH0uvW0-jy6DXxO5QNNFdbL0_AKbOTOrfdUF0nueNXlOWLrF_cpo4zWHa2UD5QdQ5Nd9gwEAAA==&view=Jadwal%20Tanding"; 
+            
+            // This force-loads the app cleanly without polluting the phone's back-swipe memory
+            if (iframe) {
+                iframe.contentWindow.location.replace(appsheetUrl);
+            }
+        };
+    </script>
 </body>
 </html>

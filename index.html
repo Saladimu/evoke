@@ -95,7 +95,9 @@
     <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vSEIhSXJGhIrmUPcj2vWWnZHagsQnkm9-BBBr1tdmmWiCKB0OvYqkBCiRIpHO_f_tpJfTW8YjCtu4vt/pubhtml?gid=1951996956&single=true&chrome=false&widget=false"></iframe>
 
     <script>
-        const CLOUD_STORAGE_URL = 'https://keyval.org';
+        // Unique global database endpoint configurations
+        const API_BASE = 'https://api.keyval.org';
+        const STORAGE_KEY = 'evoke2_scores_config_v2';
         const isLocalFile = window.location.protocol === 'file:';
 
         let globalStates = {
@@ -139,23 +141,25 @@
             });
         }
 
-        // --- 3. Hybrid Storage Sync (Local/Cloud) ---
+        // --- 3. Hybrid Storage Sync Engine ---
         async function loadSettings() {
             if (isLocalFile) {
                 const saved = localStorage.getItem('local-test-config');
                 if (saved) globalStates = JSON.parse(saved);
             } else {
                 try {
-                    // Added a dynamic timestamp parameter to bypass browser caching completely
-                    const response = await fetch(`${CLOUD_STORAGE_URL}?_cb=${Date.now()}`);
+                    // Fetch text value via keyval standard GET endpoint
+                    const response = await fetch(`${API_BASE}/get/${STORAGE_KEY}?_cb=${Date.now()}`);
                     if (response.ok) {
                         const rawText = await response.text();
-                        // Parse safely to avoid data type mismatches on mobile
-                        const data = JSON.parse(rawText);
-                        if (data && typeof data === 'object') globalStates = { ...globalStates, ...data };
+                        // Clean up response if wrapped in quotes or formatting
+                        const cleanText = rawText.replace(/^"|"$/g, '').trim();
+                        if (cleanText && cleanText.length > 5) {
+                            globalStates = JSON.parse(cleanText);
+                        }
                     }
                 } catch (error) {
-                    console.warn("Cloud settings read failed. Falling back to default.");
+                    console.warn("Cloud connection error. Defaults loaded.");
                 }
             }
             applyUiChanges();
@@ -166,13 +170,11 @@
                 localStorage.setItem('local-test-config', JSON.stringify(globalStates));
             } else {
                 try {
-                    // Send as clear string text to ensure absolute compatibility with keyval API limits
-                    await fetch(CLOUD_STORAGE_URL, {
-                        method: 'POST',
-                        body: JSON.stringify(globalStates)
-                    });
+                    const dataString = encodeURIComponent(JSON.stringify(globalStates));
+                    // Send configurations via the URL path format required by keyval
+                    await fetch(`${API_BASE}/set/${STORAGE_KEY}/${dataString}`);
                 } catch (error) {
-                    console.error("Cloud syncing failed:", error);
+                    console.error("Cloud database syncing failed:", error);
                 }
             }
         }

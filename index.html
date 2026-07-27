@@ -146,13 +146,16 @@
                 if (saved) globalStates = JSON.parse(saved);
             } else {
                 try {
-                    const response = await fetch(CLOUD_STORAGE_URL);
+                    // Added a dynamic timestamp parameter to bypass browser caching completely
+                    const response = await fetch(`${CLOUD_STORAGE_URL}?_cb=${Date.now()}`);
                     if (response.ok) {
-                        const data = await response.json();
+                        const rawText = await response.text();
+                        // Parse safely to avoid data type mismatches on mobile
+                        const data = JSON.parse(rawText);
                         if (data && typeof data === 'object') globalStates = { ...globalStates, ...data };
                     }
                 } catch (error) {
-                    console.warn("Cloud offline. Using default settings.", error);
+                    console.warn("Cloud settings read failed. Falling back to default.");
                 }
             }
             applyUiChanges();
@@ -163,9 +166,9 @@
                 localStorage.setItem('local-test-config', JSON.stringify(globalStates));
             } else {
                 try {
+                    // Send as clear string text to ensure absolute compatibility with keyval API limits
                     await fetch(CLOUD_STORAGE_URL, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(globalStates)
                     });
                 } catch (error) {

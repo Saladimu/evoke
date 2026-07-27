@@ -7,202 +7,22 @@
     <link rel="icon" type="image/png" href="favicon.png">
     <style>
         body, html { margin: 0; padding: 0; height: 100%; display: flex; flex-direction: column; overflow: hidden; font-family: sans-serif; }
-        .nav-bar { background: #333; padding: 10px 20px; display: flex; gap: 20px; align-items: center; position: relative; }
+        .nav-bar { background: #333; padding: 10px 20px; display: flex; gap: 20px; }
         .nav-bar a { color: white; text-decoration: none; font-weight: bold; font-size: 18px; }
         .nav-bar a:hover { color: #007bff; }
-        
-        /* Disabled link styling */
-        .nav-bar a.disabled { 
-            color: #666 !important; 
-            pointer-events: none; 
-            cursor: not-allowed; 
-            opacity: 0.6;
-        }
-
-        /* Hidden admin panel container */
-        .admin-panel {
-            display: none; 
-            position: absolute;
-            right: 20px;
-            background: #444;
-            padding: 8px 12px;
-            border-radius: 4px;
-            color: white;
-            font-size: 14px;
-            gap: 10px;
-            align-items: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-            z-index: 20;
-        }
-
-        /* Toggle switch UI */
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 40px;
-            height: 20px;
-        }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider {
-            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #ccc; transition: .3s; border-radius: 20px;
-        }
-        .slider:before {
-            position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px;
-            background-color: white; transition: .3s; border-radius: 50%;
-        }
-        input:checked + .slider { background-color: #007bff; }
-        input:checked + .slider:before { transform: translateX(20px); }
-
         iframe { width: 100%; flex-grow: 1; border: none; }
     </style>
 </head>
 <body>
     <!-- Top Menu Bar -->
-    <div class="nav-bar">
-        <!-- Secret trigger area (Clicking this 5 times opens the controls) -->
-        <div id="secret-trigger" style="position: absolute; left: 0; top: 0; width: 30px; height: 100%; cursor: default; z-index: 10;"></div>
+   <div class="nav-bar">
+		<a href="index.html" style="color: #007bff;">📊 Hasil Lomba</a>
+    <a href="events.html">🗓 Kalender Lomba</a>
+    <a href="feedback.html">📩 Feedback </a>
+</div>
 
-        <a href="index.html" id="nav-hasil" style="color: #007bff;">📊 Hasil Lomba</a>
-        <a href="events.html" id="nav-kalender">🗓 Kalender Lomba</a>
-        <a href="feedback.html" id="nav-feedback">📩 Feedback </a>
 
-        <!-- Hidden Control Switches -->
-        <div class="admin-panel" id="adminPanel">
-            <span style="font-weight: bold; margin-right: 5px; color: #ffc107;" id="panel-title">Global Admin:</span>
-            
-            <label>Hasil:</label>
-            <label class="switch">
-                <input type="checkbox" id="toggle-hasil" checked>
-                <span class="slider"></span>
-            </label>
-
-            <label>Kalender:</label>
-            <label class="switch">
-                <input type="checkbox" id="toggle-kalender" checked>
-                <span class="slider"></span>
-            </label>
-
-            <label>Feedback:</label>
-            <label class="switch">
-                <input type="checkbox" id="toggle-feedback" checked>
-                <span class="slider"></span>
-            </label>
-        </div>
-    </div>
-
- <!-- Google Sheet -->
+    <!-- Google Sheet -->
     <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vSEIhSXJGhIrmUPcj2vWWnZHagsQnkm9-BBBr1tdmmWiCKB0OvYqkBCiRIpHO_f_tpJfTW8YjCtu4vt/pubhtml?gid=1951996956&single=true&chrome=false&widget=false"></iframe>
-
-    <script>
-        // Changed storage key version to instantly clear the bad/empty public data cache
-        const API_BASE = 'https://keyval.org';
-        const STORAGE_KEY = 'evoke2_scores_config_v3'; 
-        const isLocalFile = window.location.protocol === 'file:';
-
-        // Strict default state is completely active/enabled
-        let globalStates = {
-            hasil: true,
-            kalender: true,
-            feedback: true
-        };
-
-        document.getElementById('panel-title').innerText = isLocalFile ? "Local Admin:" : "Global Admin:";
-
-        // --- 1. Secret Reveal Mechanism ---
-        let clickCount = 0;
-        document.getElementById('secret-trigger').addEventListener('click', () => {
-            clickCount++;
-            if (clickCount === 5) {
-                document.getElementById('adminPanel').style.display = 'flex';
-                clickCount = 0; 
-            }
-        });
-
-        // --- 2. Update Link UI Styles ---
-        function applyUiChanges() {
-            const configs = [
-                { linkId: 'nav-hasil', state: globalStates.hasil, checkboxId: 'toggle-hasil' },
-                { linkId: 'nav-kalender', state: globalStates.kalender, checkboxId: 'toggle-kalender' },
-                { linkId: 'nav-feedback', state: globalStates.feedback, checkboxId: 'toggle-feedback' }
-            ];
-
-            configs.forEach(config => {
-                const link = document.getElementById(config.linkId);
-                const checkbox = document.getElementById(config.checkboxId);
-                
-                if (checkbox) checkbox.checked = config.state;
-                if (link) {
-                    if (config.state) {
-                        link.classList.remove('disabled');
-                    } else {
-                        link.classList.add('disabled');
-                    }
-                }
-            });
-        }
-
-        // --- 3. Hybrid Storage Sync Engine ---
-        async function loadSettings() {
-            if (isLocalFile) {
-                const saved = localStorage.getItem('local-test-config');
-                if (saved) globalStates = JSON.parse(saved);
-            } else {
-                try {
-                    const response = await fetch(`${API_BASE}/get/${STORAGE_KEY}?_cb=${Date.now()}`);
-                    if (response.ok) {
-                        const rawText = await response.text();
-                        const cleanText = rawText.replace(/^"|"$/g, '').trim();
-                        
-                        // Only override if data exists and is a valid JSON object structure
-                        if (cleanText && cleanText.startsWith('{') && cleanText.endsWith('}')) {
-                            const parsedData = JSON.parse(cleanText);
-                            if (parsedData && typeof parsedData === 'object') {
-                                globalStates = { ...globalStates, ...parsedData };
-                            }
-                        }
-                    }
-                } catch (error) {
-                    console.warn("Cloud connection error. Keeping standard enabled defaults.");
-                }
-            }
-            applyUiChanges();
-        }
-
-        async function saveSettings() {
-            if (isLocalFile) {
-                localStorage.setItem('local-test-config', JSON.stringify(globalStates));
-            } else {
-                try {
-                    const dataString = encodeURIComponent(JSON.stringify(globalStates));
-                    await fetch(`${API_BASE}/set/${STORAGE_KEY}/${dataString}`);
-                } catch (error) {
-                    console.error("Cloud database syncing failed:", error);
-                }
-            }
-        }
-
-        // --- 4. Event Listeners for Changes ---
-        document.getElementById('toggle-hasil').addEventListener('change', async (e) => {
-            globalStates.hasil = e.target.checked;
-            applyUiChanges();
-            await saveSettings();
-        });
-
-        document.getElementById('toggle-kalender').addEventListener('change', async (e) => {
-            globalStates.kalender = e.target.checked;
-            applyUiChanges();
-            await saveSettings();
-        });
-
-        document.getElementById('toggle-feedback').addEventListener('change', async (e) => {
-            globalStates.feedback = e.target.checked;
-            applyUiChanges();
-            await saveSettings();
-        });
-
-        // Initialize state configurations
-        loadSettings();
-    </script>
 </body>
 </html>

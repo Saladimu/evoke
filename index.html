@@ -91,15 +91,16 @@
         </div>
     </div>
 
-<!-- Google Sheet -->
+ <!-- Google Sheet -->
     <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vSEIhSXJGhIrmUPcj2vWWnZHagsQnkm9-BBBr1tdmmWiCKB0OvYqkBCiRIpHO_f_tpJfTW8YjCtu4vt/pubhtml?gid=1951996956&single=true&chrome=false&widget=false"></iframe>
 
     <script>
-        // Unique global database endpoint configurations
-        const API_BASE = 'https://api.keyval.org';
-        const STORAGE_KEY = 'evoke2_scores_config_v2';
+        // Changed storage key version to instantly clear the bad/empty public data cache
+        const API_BASE = 'https://keyval.org';
+        const STORAGE_KEY = 'evoke2_scores_config_v3'; 
         const isLocalFile = window.location.protocol === 'file:';
 
+        // Strict default state is completely active/enabled
         let globalStates = {
             hasil: true,
             kalender: true,
@@ -148,18 +149,21 @@
                 if (saved) globalStates = JSON.parse(saved);
             } else {
                 try {
-                    // Fetch text value via keyval standard GET endpoint
                     const response = await fetch(`${API_BASE}/get/${STORAGE_KEY}?_cb=${Date.now()}`);
                     if (response.ok) {
                         const rawText = await response.text();
-                        // Clean up response if wrapped in quotes or formatting
                         const cleanText = rawText.replace(/^"|"$/g, '').trim();
-                        if (cleanText && cleanText.length > 5) {
-                            globalStates = JSON.parse(cleanText);
+                        
+                        // Only override if data exists and is a valid JSON object structure
+                        if (cleanText && cleanText.startsWith('{') && cleanText.endsWith('}')) {
+                            const parsedData = JSON.parse(cleanText);
+                            if (parsedData && typeof parsedData === 'object') {
+                                globalStates = { ...globalStates, ...parsedData };
+                            }
                         }
                     }
                 } catch (error) {
-                    console.warn("Cloud connection error. Defaults loaded.");
+                    console.warn("Cloud connection error. Keeping standard enabled defaults.");
                 }
             }
             applyUiChanges();
@@ -171,7 +175,6 @@
             } else {
                 try {
                     const dataString = encodeURIComponent(JSON.stringify(globalStates));
-                    // Send configurations via the URL path format required by keyval
                     await fetch(`${API_BASE}/set/${STORAGE_KEY}/${dataString}`);
                 } catch (error) {
                     console.error("Cloud database syncing failed:", error);
@@ -198,6 +201,7 @@
             await saveSettings();
         });
 
+        // Initialize state configurations
         loadSettings();
     </script>
 </body>

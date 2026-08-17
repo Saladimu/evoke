@@ -27,6 +27,14 @@
         .sect h2 { font-size: 18px; margin: 0 0 12px; }
         #pendingList td, #pendingList th { text-align: center; }
         #pendingList td:first-child, #pendingList th:first-child { text-align: left; }
+        .filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 14px; }
+        .filters select, .filters input {
+            padding: 8px 10px; font-size: 14px; border: 1px solid #ccc;
+            border-radius: 6px; background: #fff; color: #222;
+        }
+        .filters input[type="text"] { min-width: 200px; }
+        .count { font-size: 13px; color: #666; margin: 0 0 10px; }
+        .badge-win { background: #e8f5e9; color: #2e7d32; padding: 2px 8px; border-radius: 12px; font-size: 12px; }
         .error { background: #ffebee; color: #b71c1c; padding: 16px; border-radius: 8px; margin-bottom: 20px; }
         .loading { color: #666; }
         @media (max-width: 600px) {
@@ -61,6 +69,31 @@
         </div>
 
         <div class="sect">
+            <h2>Total Lomba Internal (Selesai)</h2>
+            <div class="filters">
+                <select id="fltKelas">
+                    <option value="">Semua Kelas</option>
+                    <option>SD</option>
+                    <option>SMP</option>
+                    <option>SMA</option>
+                    <option>Gabungan</option>
+                </select>
+                <select id="fltPic">
+                    <option value="">Semua PIC</option>
+                </select>
+                <input type="text" id="fltSearch" placeholder="Cari lomba / tim / pemenang...">
+            </div>
+            <p class="count" id="internalCount"></p>
+            <table>
+                <thead>
+                    <tr><th>Lomba</th><th>Kelas</th><th>Tim 1</th><th>Tim 2</th><th>Pemenang</th><th>Tanggal</th><th>Jam</th><th>PIC</th></tr>
+                </thead>
+                <tbody id="internalList"></tbody>
+            </table>
+            <p class="sub" id="internalEmpty" style="display:none;">Tidak ada lomba internal yang selesai.</p>
+        </div>
+
+        <div class="sect">
             <h2>Belum Ada Pemenang (Pending)</h2>
             <table id="pendingTable">
                 <thead>
@@ -75,6 +108,7 @@
     <script>
         const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSEIhSXJGhIrmUPcj2vWWnZHagsQnkm9-BBBr1tdmmWiCKB0OvYqkBCiRIpHO_f_tpJfTW8YjCtu4vt/pub?gid=470675989&single=true&output=csv";
         const KELAS = ["SD", "SMP", "SMA", "Gabungan"];
+        let internalRecords = [];
 
         function parseCSV(text) {
             const rows = [];
@@ -121,9 +155,12 @@
                 r["Pemenang"] === "" && r["Tim-1"] !== "" && r["Tim-2"] !== ""
             );
 
-            const totalLomba = records.filter(r =>
+            const internal = records.filter(r =>
                 r["Tanggal"] !== "" && r["Pemenang"] !== "" && r["Internal"].toUpperCase() === "TRUE"
-            ).length;
+            );
+            internalRecords = internal;
+
+            const totalLomba = internal.length;
 
             const totalCount = {};
             const winners = {};
@@ -133,7 +170,13 @@
                 if (r["Pemenang"] !== "" && KELAS.includes(r["Kelas"])) winners[r["Kelas"]]++;
             });
 
+            const pics = [...new Set(internal.map(r => r["PIC"]).filter(Boolean))].sort();
+            const picSel = document.getElementById("fltPic");
+            picSel.innerHTML = '<option value="">Semua PIC</option>' +
+                pics.map(p => '<option>' + esc(p) + "</option>").join("");
+
             render(records.length, pending, totalLomba, totalCount, winners);
+            renderInternal();
         }
 
         function render(total, pending, totalLomba, totalCount, winners) {
@@ -173,7 +216,49 @@
                 '</div><div class="lbl">' + label + "</div></div>";
         }
 
+        function renderInternal() {
+            const kelas = document.getElementById("fltKelas").value;
+            const pic = document.getElementById("fltPic").value;
+            const q = document.getElementById("fltSearch").value.trim().toLowerCase();
+
+            let rows = internalRecords.filter(r =>
+                (!kelas || r["Kelas"] === kelas) &&
+                (!pic || r["PIC"] === pic) &&
+                (!q || (r["Deskripsi Lomba"] + " " + r["Tim-1"] + " " + r["Tim-2"] + " " +
+                    r["Pemenang"] + " " + r["Kelas"]).toLowerCase().includes(q))
+            );
+
+            rows = rows.slice().sort((a, b) => {
+                const d = a["Tanggal"].localeCompare(b["Tanggal"]);
+                if (d !== 0) return d;
+                return (a["Jam (mulai)"] || "").localeCompare(b["Jam (mulai)"] || "");
+            });
+
+            document.getElementById("internalCount").textContent =
+                rows.length + " dari " + internalRecords.length + " lomba internal selesai";
+
+            const list = document.getElementById("internalList");
+            if (rows.length === 0) {
+                list.innerHTML = "";
+                document.getElementById("internalEmpty").style.display = "";
+            } else {
+                document.getElementById("internalEmpty").style.display = "none";
+                list.innerHTML = rows.map(r =>
+                    "<tr><td>" + esc(r["Deskripsi Lomba"]) + "</td><td>" + esc(r["Kelas"]) +
+                    "</td><td>" + esc(r["Tim-1"]) + "</td><td>" + esc(r["Tim-2"]) +
+                    '</td><td><span class="badge-win">' + esc(r["Pemenang"]) + "</span></td>" +
+                    "<td>" + esc(r["Tanggal"]) + "</td><td>" + esc(r["Jam (mulai)"]) +
+                    "</td><td>" + esc(r["PIC"]) + "</td></tr>"
+                ).join("");
+            }
+        }
+
         (function () {
+            ["fltKelas", "fltPic", "fltSearch"].forEach(id => {
+                document.getElementById(id).addEventListener(
+                    id === "fltSearch" ? "input" : "change", renderInternal);
+            });
+
             loadReport().catch(err => {
                 document.getElementById("errorBox").style.display = "";
                 document.getElementById("errorBox").textContent =

@@ -12,14 +12,17 @@
         .nav-bar a:hover { color: #007bff; }
         .wrap { max-width: 960px; margin: 0 auto; padding: 24px 16px 48px; }
         h1 { margin: 0 0 4px; font-size: 26px; }
+        .header { display: flex; align-items: center; gap: 12px; }
+        .header-icon { width: 40px; height: 40px; object-fit: contain; }
         .sub { color: #666; margin: 0 0 24px; font-size: 14px; }
+        .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
         .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px; }
         .card { background: #fff; border-radius: 10px; padding: 18px 20px; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
         .card .num { font-size: 34px; font-weight: bold; }
         .card .lbl { font-size: 13px; color: #666; margin-top: 2px; }
         .pending { background: #fff8e1; }
         .done { background: #e8f5e9; }
-        table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+        table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; }
         th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid #eee; font-size: 14px; }
         th { background: #333; color: #fff; }
         tr:last-child td { border-bottom: none; }
@@ -56,9 +59,24 @@
         .modal-close:hover { color: #000; }
         .winner-link { color: #007bff; cursor: pointer; text-decoration: underline; }
         .winner-link:hover { color: #0056b3; }
+        @media (max-width: 900px) {
+            .wrap { padding: 16px 12px 40px; }
+            .stats { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+        }
         @media (max-width: 600px) {
-            .stats { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
-            table { font-size: 12px; }
+            .nav-bar { padding: 8px 10px; gap: 12px; }
+            .nav-bar a { font-size: 14px; }
+            .header { gap: 8px; }
+            .header-icon { width: 32px; height: 32px; }
+            h1 { font-size: 20px; }
+            .stats { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+            .card { padding: 14px 14px; }
+            .card .num { font-size: 26px; }
+            .filters select, .filters input { font-size: 13px; }
+            .filters input[type="text"] { min-width: 0; width: 100%; }
+            .filters { gap: 8px; }
+            .modal-content { max-height: 85vh; }
+            .modal-head { font-size: 14px; padding: 12px 14px; }
         }
     </style>
 </head>
@@ -70,7 +88,10 @@
     </div>
 
     <div class="wrap">
-        <h1>Live Score Report</h1>
+        <div class="header">
+            <img src="reventraicon.png" alt="Reventra" class="header-icon">
+            <h1>Live Score Report</h1>
+        </div>
         <p class="sub" id="generatedAt">Loading data...</p>
 
         <div id="errorBox" class="error" style="display:none;"></div>
@@ -78,7 +99,7 @@
         <div class="stats" id="statCards"></div>
 
         <div class="sect">
-            <h2 style="text-align:center;">Ringkasan per Kelas</h2>
+            <h2 style="text-align:center;">Summary Lomba</h2>
             <table id="kelasTableWrap">
                 <thead>
                     <tr><th>Kelas</th><th>Total Lomba</th><th>Pemenang</th></tr>
@@ -103,23 +124,27 @@
                 <input type="text" id="fltSearch" placeholder="Cari lomba / tim / pemenang...">
             </div>
             <p class="count" id="internalCount"></p>
-            <table id="internalTable">
-                <thead>
-                    <tr><th>ID-No</th><th>Lomba</th><th>Kelas</th><th>Tim 1</th><th>Tim 2</th><th>Pemenang</th><th>Tanggal</th><th>Jam</th></tr>
-                </thead>
-                <tbody id="internalList"></tbody>
-            </table>
+            <div class="table-scroll">
+                <table id="internalTable">
+                    <thead>
+                        <tr><th>ID-No</th><th>Lomba</th><th>Kelas</th><th>Tim 1</th><th>Tim 2</th><th>Pemenang</th><th>Tanggal</th><th>Jam</th></tr>
+                    </thead>
+                    <tbody id="internalList"></tbody>
+                </table>
+            </div>
             <p class="sub" id="internalEmpty" style="display:none;">Tidak ada lomba internal yang selesai.</p>
         </div>
 
         <div class="sect">
             <h2>Lomba terjadwal (Pending)</h2>
-            <table id="pendingTable">
-                <thead>
-                    <tr><th>ID-No</th><th>Lomba</th><th>Kelas</th><th>Tim 1</th><th>Tim 2</th><th>Tanggal</th><th>Jam Mulai</th></tr>
-                </thead>
-                <tbody id="pendingList"></tbody>
-            </table>
+            <div class="table-scroll">
+                <table id="pendingTable">
+                    <thead>
+                        <tr><th>ID-No</th><th>Lomba</th><th>Kelas</th><th>Tim 1</th><th>Tim 2</th><th>Tanggal</th><th>Jam Mulai</th></tr>
+                    </thead>
+                    <tbody id="pendingList"></tbody>
+                </table>
+            </div>
             <p class="sub" id="pendingEmpty" style="display:none;">Tidak ada pertandingan pending.</p>
         </div>
     </div>
@@ -130,12 +155,14 @@
                 <span id="winnerModalTitle"></span>
                 <button id="winnerModalClose" class="modal-close">×</button>
             </div>
-            <table>
-                <thead>
-                    <tr><th>ID-No</th><th>Lomba</th><th>Kelas</th><th>Tim 1</th><th>Tim 2</th><th>Pemenang</th><th>Tanggal</th></tr>
-                </thead>
-                <tbody id="winnerList"></tbody>
-            </table>
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                        <tr><th>ID-No</th><th>Lomba</th><th>Kelas</th><th>Tim 1</th><th>Tim 2</th><th>Pemenang</th><th>Tanggal</th></tr>
+                    </thead>
+                    <tbody id="winnerList"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -188,7 +215,7 @@
             allRecords = records;
 
             const pending = records.filter(r =>
-                r["Pemenang"] === "" && r["Tim-1"] !== "" && r["Tim-2"] !== ""
+                r["Tanggal"] !== "" && r["Pemenang"] === "" && r["Tim-1"] !== "" && r["Tim-2"] !== ""
             );
 
             const internal = records.filter(r =>

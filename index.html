@@ -25,8 +25,9 @@
         tr:last-child td { border-bottom: none; }
         .sect { margin-top: 28px; }
         .sect h2 { font-size: 18px; margin: 0 0 12px; }
-        #pendingList td, #pendingList th { text-align: center; }
-        #pendingList td:first-child, #pendingList th:first-child { text-align: left; }
+        #pendingList td { text-align: left; }
+        #pendingList th { text-align: center; }
+        #kelasTableWrap td:nth-child(2), #kelasTableWrap td:nth-child(3) { text-align: right; }
         .filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 14px; }
         .filters select, .filters input {
             padding: 8px 10px; font-size: 14px; border: 1px solid #ccc;
@@ -35,6 +36,8 @@
         .filters input[type="text"] { min-width: 200px; }
         .count { font-size: 13px; color: #666; margin: 0 0 10px; }
         .badge-win { background: #e8f5e9; color: #2e7d32; padding: 2px 8px; border-radius: 12px; font-size: 12px; }
+        #kelasTableWrap { width: auto; margin: 0 auto; }
+        #kelasTableWrap th, #kelasTableWrap td { padding: 6px 18px; font-size: 13px; }
         .error { background: #ffebee; color: #b71c1c; padding: 16px; border-radius: 8px; margin-bottom: 20px; }
         .loading { color: #666; }
         @media (max-width: 600px) {
@@ -59,17 +62,17 @@
         <div class="stats" id="statCards"></div>
 
         <div class="sect">
-            <h2>Ringkasan per Kelas</h2>
-            <table>
+            <h2 style="text-align:center;">Ringkasan per Kelas</h2>
+            <table id="kelasTableWrap">
                 <thead>
-                    <tr><th>Kelas</th><th>Total Lomba (terjadwal)</th><th>Juara (sudah selesai)</th></tr>
+                    <tr><th>Kelas</th><th>Total Lomba (terjadwal)</th><th>Pemenang</th></tr>
                 </thead>
                 <tbody id="kelasTable"></tbody>
             </table>
         </div>
 
         <div class="sect">
-            <h2>Total Lomba Internal (Selesai)</h2>
+            <h2>Total Lomba (Selesai)</h2>
             <div class="filters">
                 <select id="fltKelas">
                     <option value="">Semua Kelas</option>
@@ -78,15 +81,15 @@
                     <option>SMA</option>
                     <option>Gabungan</option>
                 </select>
-                <select id="fltPic">
-                    <option value="">Semua PIC</option>
+                <select id="fltTanggal">
+                    <option value="">Semua Tanggal</option>
                 </select>
                 <input type="text" id="fltSearch" placeholder="Cari lomba / tim / pemenang...">
             </div>
             <p class="count" id="internalCount"></p>
             <table>
                 <thead>
-                    <tr><th>Lomba</th><th>Kelas</th><th>Tim 1</th><th>Tim 2</th><th>Pemenang</th><th>Tanggal</th><th>Jam</th><th>PIC</th></tr>
+                    <tr><th>Lomba</th><th>Kelas</th><th>Tim 1</th><th>Tim 2</th><th>Pemenang</th><th>Tanggal</th><th>Jam</th></tr>
                 </thead>
                 <tbody id="internalList"></tbody>
             </table>
@@ -94,7 +97,7 @@
         </div>
 
         <div class="sect">
-            <h2>Belum Ada Pemenang (Pending)</h2>
+            <h2>Lomba terjadwal (Pending)</h2>
             <table id="pendingTable">
                 <thead>
                     <tr><th>Lomba</th><th>Kelas</th><th>Tim 1</th><th>Tim 2</th><th>Tanggal</th><th>Jam Mulai</th></tr>
@@ -170,10 +173,14 @@
                 if (r["Pemenang"] !== "" && KELAS.includes(r["Kelas"])) winners[r["Kelas"]]++;
             });
 
-            const pics = [...new Set(internal.map(r => r["PIC"]).filter(Boolean))].sort();
-            const picSel = document.getElementById("fltPic");
-            picSel.innerHTML = '<option value="">Semua PIC</option>' +
-                pics.map(p => '<option>' + esc(p) + "</option>").join("");
+            const tanggals = [...new Set(internal.map(r => r["Tanggal"]).filter(Boolean))].sort((a, b) => {
+                const dateA = new Date(a.replace(/(\d+)-(\w+)-(\d+)/, "$2 $1 $3"));
+                const dateB = new Date(b.replace(/(\d+)-(\w+)-(\d+)/, "$2 $1 $3"));
+                return dateA - dateB;
+            });
+            const tgSel = document.getElementById("fltTanggal");
+            tgSel.innerHTML = '<option value="">Semua Tanggal</option>' +
+                tanggals.map(t => '<option>' + esc(t) + "</option>").join("");
 
             render(records.length, pending, totalLomba, totalCount, winners);
             renderInternal();
@@ -184,8 +191,8 @@
             const grandWin = KELAS.reduce((s, k) => s + winners[k], 0);
 
             document.getElementById("statCards").innerHTML = [
-                card(pending.length, "Belum Ada Pemenang (Pending)", "pending"),
-                card(totalLomba, "Total Lomba Internal (Selesai)", "done"),
+                card(pending.length, "Lomba terjadwal (Pending)", "pending"),
+                card(totalLomba, "Total Lomba (Selesai)", "done"),
                 card(grandTotal, "Total Lomba Terjadwal", ""),
                 card(grandWin, "Total Juara Diumumkan", "")
             ].join("");
@@ -208,7 +215,7 @@
             }
 
             document.getElementById("generatedAt").textContent =
-                "Total " + total + " baris data. Diperbarui " + new Date().toLocaleString("id-ID");
+                "Evoke - Reventra (01-10 Oct 2026). Diperbarui " + new Date().toLocaleString("id-ID");
         }
 
         function card(num, label, cls) {
@@ -218,12 +225,12 @@
 
         function renderInternal() {
             const kelas = document.getElementById("fltKelas").value;
-            const pic = document.getElementById("fltPic").value;
+            const tanggal = document.getElementById("fltTanggal").value;
             const q = document.getElementById("fltSearch").value.trim().toLowerCase();
 
             let rows = internalRecords.filter(r =>
                 (!kelas || r["Kelas"] === kelas) &&
-                (!pic || r["PIC"] === pic) &&
+                (!tanggal || r["Tanggal"] === tanggal) &&
                 (!q || (r["Deskripsi Lomba"] + " " + r["Tim-1"] + " " + r["Tim-2"] + " " +
                     r["Pemenang"] + " " + r["Kelas"]).toLowerCase().includes(q))
             );
@@ -235,7 +242,7 @@
             });
 
             document.getElementById("internalCount").textContent =
-                rows.length + " dari " + internalRecords.length + " lomba internal selesai";
+                rows.length + " dari " + internalRecords.length + " lomba selesai";
 
             const list = document.getElementById("internalList");
             if (rows.length === 0) {
@@ -247,14 +254,13 @@
                     "<tr><td>" + esc(r["Deskripsi Lomba"]) + "</td><td>" + esc(r["Kelas"]) +
                     "</td><td>" + esc(r["Tim-1"]) + "</td><td>" + esc(r["Tim-2"]) +
                     '</td><td><span class="badge-win">' + esc(r["Pemenang"]) + "</span></td>" +
-                    "<td>" + esc(r["Tanggal"]) + "</td><td>" + esc(r["Jam (mulai)"]) +
-                    "</td><td>" + esc(r["PIC"]) + "</td></tr>"
+                    "<td>" + esc(r["Tanggal"]) + "</td><td>" + esc(r["Jam (mulai)"]) + "</td></tr>"
                 ).join("");
             }
         }
 
         (function () {
-            ["fltKelas", "fltPic", "fltSearch"].forEach(id => {
+            ["fltKelas", "fltTanggal", "fltSearch"].forEach(id => {
                 document.getElementById(id).addEventListener(
                     id === "fltSearch" ? "input" : "change", renderInternal);
             });

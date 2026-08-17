@@ -1,29 +1,186 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EVOKE 2 - Live Scores</title> 
+    <title>EVOKE 2 - Live Score Report</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; display: flex; flex-direction: column; overflow: hidden; font-family: sans-serif; }
+        body { margin: 0; font-family: sans-serif; background: #f4f6f8; color: #222; }
         .nav-bar { background: #333; padding: 10px 20px; display: flex; gap: 20px; }
         .nav-bar a { color: white; text-decoration: none; font-weight: bold; font-size: 18px; }
         .nav-bar a:hover { color: #007bff; }
-        iframe { width: 100%; flex-grow: 1; border: none; }
+        .wrap { max-width: 960px; margin: 0 auto; padding: 24px 16px 48px; }
+        h1 { margin: 0 0 4px; font-size: 26px; }
+        .sub { color: #666; margin: 0 0 24px; font-size: 14px; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px; }
+        .card { background: #fff; border-radius: 10px; padding: 18px 20px; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+        .card .num { font-size: 34px; font-weight: bold; }
+        .card .lbl { font-size: 13px; color: #666; margin-top: 2px; }
+        .pending { background: #fff8e1; }
+        .done { background: #e8f5e9; }
+        table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+        th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid #eee; font-size: 14px; }
+        th { background: #333; color: #fff; }
+        tr:last-child td { border-bottom: none; }
+        .sect { margin-top: 28px; }
+        .sect h2 { font-size: 18px; margin: 0 0 12px; }
+        #pendingList td, #pendingList th { text-align: center; }
+        #pendingList td:first-child, #pendingList th:first-child { text-align: left; }
+        .error { background: #ffebee; color: #b71c1c; padding: 16px; border-radius: 8px; margin-bottom: 20px; }
+        .loading { color: #666; }
+        @media (max-width: 600px) {
+            .stats { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+            table { font-size: 12px; }
+        }
     </style>
 </head>
 <body>
-    <!-- Top Menu Bar -->
-   <div class="nav-bar">
-		<a href="index.html" style="color: #007bff;">📊 Hasil Lomba</a>
-    <a href="events.html">🗓 Kalender Lomba</a>
-    <a href="feedback.html">📩 Feedback </a>
-</div>
+    <div class="nav-bar">
+        <a href="index.html" style="color: #007bff;">📊 Hasil Lomba</a>
+        <a href="events.html">🗓 Kalender Lomba</a>
+        <a href="feedback.html">📩 Feedback</a>
+    </div>
 
+    <div class="wrap">
+        <h1>Live Score Report</h1>
+        <p class="sub" id="generatedAt">Loading data...</p>
 
-    <!-- Google Sheet -->
-  <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vSEIhSXJGhIrmUPcj2vWWnZHagsQnkm9-BBBr1tdmmWiCKB0OvYqkBCiRIpHO_f_tpJfTW8YjCtu4vt/pub?gid=470675989&single=true&output=csv"></iframe>
-    <!--<iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vSEIhSXJGhIrmUPcj2vWWnZHagsQnkm9-BBBr1tdmmWiCKB0OvYqkBCiRIpHO_f_tpJfTW8YjCtu4vt/pubhtml?gid=1951996956&single=true&chrome=false&widget=false"></iframe>-->
+        <div id="errorBox" class="error" style="display:none;"></div>
+
+        <div class="stats" id="statCards"></div>
+
+        <div class="sect">
+            <h2>Ringkasan per Kelas</h2>
+            <table>
+                <thead>
+                    <tr><th>Kelas</th><th>Total Lomba (terjadwal)</th><th>Juara (sudah selesai)</th></tr>
+                </thead>
+                <tbody id="kelasTable"></tbody>
+            </table>
+        </div>
+
+        <div class="sect">
+            <h2>Belum Ada Pemenang (Pending)</h2>
+            <table id="pendingTable">
+                <thead>
+                    <tr><th>Lomba</th><th>Kelas</th><th>Tim 1</th><th>Tim 2</th><th>Tanggal</th><th>Jam Mulai</th></tr>
+                </thead>
+                <tbody id="pendingList"></tbody>
+            </table>
+            <p class="sub" id="pendingEmpty" style="display:none;">Tidak ada pertandingan pending.</p>
+        </div>
+    </div>
+
+    <script>
+        const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSEIhSXJGhIrmUPcj2vWWnZHagsQnkm9-BBBr1tdmmWiCKB0OvYqkBCiRIpHO_f_tpJfTW8YjCtu4vt/pub?gid=470675989&single=true&output=csv";
+        const KELAS = ["SD", "SMP", "SMA", "Gabungan"];
+
+        function parseCSV(text) {
+            const rows = [];
+            let row = [], field = "", inQuotes = false;
+            for (let i = 0; i < text.length; i++) {
+                const c = text[i];
+                if (inQuotes) {
+                    if (c === '"') {
+                        if (text[i + 1] === '"') { field += '"'; i++; }
+                        else inQuotes = false;
+                    } else field += c;
+                } else {
+                    if (c === '"') inQuotes = true;
+                    else if (c === ",") { row.push(field.trim()); field = ""; }
+                    else if (c === "\n") { row.push(field.trim()); rows.push(row); row = []; field = ""; }
+                    else if (c === "\r") {}
+                    else field += c;
+                }
+            }
+            if (field.length > 0 || row.length > 0) { row.push(field.trim()); rows.push(row); }
+            return rows.filter(r => r.length > 0 && !r.every(f => f === ""));
+        }
+
+        function rowToObject(header, row) {
+            const obj = {};
+            header.forEach((h, i) => { obj[h] = row[i] !== undefined ? row[i] : ""; });
+            return obj;
+        }
+
+        function esc(s) {
+            return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        async function loadReport() {
+            const res = await fetch(SHEET_URL);
+            if (!res.ok) throw new Error("Gagal mengambil data sheet (HTTP " + res.status + ")");
+            const csv = await res.text();
+            const rows = parseCSV(csv);
+            if (rows.length < 2) throw new Error("Tidak ada data di sheet.");
+            const header = rows[0];
+            const records = rows.slice(1).map(r => rowToObject(header, r));
+
+            const pending = records.filter(r =>
+                r["Pemenang"] === "" && r["Tim-1"] !== "" && r["Tim-2"] !== ""
+            );
+
+            const totalLomba = records.filter(r =>
+                r["Tanggal"] !== "" && r["Pemenang"] !== "" && r["Internal"].toUpperCase() === "TRUE"
+            ).length;
+
+            const totalCount = {};
+            const winners = {};
+            KELAS.forEach(k => { totalCount[k] = 0; winners[k] = 0; });
+            records.forEach(r => {
+                if (r["Tanggal"] !== "" && KELAS.includes(r["Kelas"])) totalCount[r["Kelas"]]++;
+                if (r["Pemenang"] !== "" && KELAS.includes(r["Kelas"])) winners[r["Kelas"]]++;
+            });
+
+            render(records.length, pending, totalLomba, totalCount, winners);
+        }
+
+        function render(total, pending, totalLomba, totalCount, winners) {
+            const grandTotal = KELAS.reduce((s, k) => s + totalCount[k], 0);
+            const grandWin = KELAS.reduce((s, k) => s + winners[k], 0);
+
+            document.getElementById("statCards").innerHTML = [
+                card(pending.length, "Belum Ada Pemenang (Pending)", "pending"),
+                card(totalLomba, "Total Lomba Internal (Selesai)", "done"),
+                card(grandTotal, "Total Lomba Terjadwal", ""),
+                card(grandWin, "Total Juara Diumumkan", "")
+            ].join("");
+
+            document.getElementById("kelasTable").innerHTML = KELAS.map(k =>
+                "<tr><td>" + esc(k) + "</td><td>" + totalCount[k] + "</td><td>" + winners[k] + "</td></tr>"
+            ).join("");
+
+            const list = document.getElementById("pendingList");
+            if (pending.length === 0) {
+                list.innerHTML = "";
+                document.getElementById("pendingEmpty").style.display = "";
+            } else {
+                document.getElementById("pendingEmpty").style.display = "none";
+                list.innerHTML = pending.map(r =>
+                    "<tr><td>" + esc(r["Deskripsi Lomba"]) + "</td><td>" + esc(r["Kelas"]) +
+                    "</td><td>" + esc(r["Tim-1"]) + "</td><td>" + esc(r["Tim-2"]) +
+                    "</td><td>" + esc(r["Tanggal"]) + "</td><td>" + esc(r["Jam (mulai)"]) + "</td></tr>"
+                ).join("");
+            }
+
+            document.getElementById("generatedAt").textContent =
+                "Total " + total + " baris data. Diperbarui " + new Date().toLocaleString("id-ID");
+        }
+
+        function card(num, label, cls) {
+            return '<div class="card ' + cls + '"><div class="num">' + num +
+                '</div><div class="lbl">' + label + "</div></div>";
+        }
+
+        (function () {
+            loadReport().catch(err => {
+                document.getElementById("errorBox").style.display = "";
+                document.getElementById("errorBox").textContent =
+                    "Gagal memuat laporan: " + err.message;
+                document.getElementById("generatedAt").textContent = "";
+            });
+        })();
+    </script>
 </body>
 </html>

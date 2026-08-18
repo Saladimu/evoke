@@ -178,9 +178,7 @@
             </div>
             <div class="table-scroll">
                 <table>
-                    <thead>
-                        <tr><th>ID-No</th><th>Lomba</th><th>Kelas</th><th>Tim 1</th><th>Tim 2</th><th>Pemenang</th><th>Tanggal</th></tr>
-                    </thead>
+                    <thead id="modalHead"></thead>
                     <tbody id="winnerList"></tbody>
                 </table>
             </div>
@@ -273,13 +271,15 @@
             const totalCount = {};
             const winners = {};
             const allTotal = {};
-            KELAS.forEach(k => { totalCount[k] = 0; winners[k] = 0; allTotal[k] = 0; });
+            const totalDesc = {};
+            KELAS.forEach(k => { totalCount[k] = 0; winners[k] = 0; allTotal[k] = 0; totalDesc[k] = new Set(); });
             records.forEach(r => {
                 const isInternal = r["Internal"].toUpperCase() === "TRUE";
                 if (r["Tanggal"] !== "" && KELAS.includes(r["Kelas"])) allTotal[r["Kelas"]]++;
-                if (r["Tanggal"] !== "" && isInternal && KELAS.includes(r["Kelas"])) totalCount[r["Kelas"]]++;
+                if (r["Tanggal"] !== "" && isInternal && KELAS.includes(r["Kelas"])) totalDesc[r["Kelas"]].add(r["Deskripsi Lomba"]);
                 if (r["Pemenang"] !== "" && isInternal && KELAS.includes(r["Kelas"])) winners[r["Kelas"]]++;
             });
+            KELAS.forEach(k => { totalCount[k] = totalDesc[k].size; });
 
             const tanggals = [...new Set(internal.map(r => r["Tanggal"]).filter(Boolean))].sort((a, b) =>
                 parseDate(a) - parseDate(b)
@@ -333,17 +333,20 @@
                 r["Pemenang"] !== "" && r["Internal"].toUpperCase() === "TRUE" && r["Kelas"] === kelas
             ).sort(byDateDesc);
 
+            document.getElementById("modalHead").innerHTML =
+                "<tr><th>ID-No</th><th>Lomba</th><th>Tim 1</th><th>Tim 2</th><th>Pemenang</th><th>Tanggal</th></tr>";
+
             document.getElementById("winnerModalTitle").textContent =
                 "Daftar Pemenang - " + kelas + " (" + list.length + ")";
 
             document.getElementById("winnerList").innerHTML = list.map(r =>
                 "<tr><td>" + esc(r["ID-No"]) + "</td><td>" + esc(r["Deskripsi Lomba"]) + "</td><td>" +
-                esc(r["Kelas"]) + "</td><td>" + esc(r["Tim-1"]) + "</td><td>" + esc(r["Tim-2"]) +
+                esc(r["Tim-1"]) + "</td><td>" + esc(r["Tim-2"]) +
                 '</td><td><span class="badge-win">' + esc(r["Pemenang"]) + "</span></td><td>" +
                 esc(r["Tanggal"]) + "</td></tr>"
-            ).join("") || '<tr><td colspan="7" style="text-align:center;color:#666;">Tidak ada data pemenang.</td></tr>';
+            ).join("") || '<tr><td colspan="6" style="text-align:center;color:#666;">Tidak ada data pemenang.</td></tr>';
 
-            document.getElementById("winnerModal").style.display = "flex";
+            document.getElementById("winnerModal").hidden = false;
         }
 
         function showTotal(kelas) {
@@ -351,15 +354,16 @@
                 r["Tanggal"] !== "" && r["Internal"].toUpperCase() === "TRUE" && r["Kelas"] === kelas
             ).sort(byDateDesc);
 
+            document.getElementById("modalHead").innerHTML =
+                "<tr><th>ID-No</th><th>Deskripsi Lomba</th><th>Tanggal</th></tr>";
+
             document.getElementById("winnerModalTitle").textContent =
                 "Daftar Lomba Internal - " + kelas + " (" + list.length + ")";
 
             document.getElementById("winnerList").innerHTML = list.map(r =>
                 "<tr><td>" + esc(r["ID-No"]) + "</td><td>" + esc(r["Deskripsi Lomba"]) + "</td><td>" +
-                esc(r["Kelas"]) + "</td><td>" + esc(r["Tim-1"]) + "</td><td>" + esc(r["Tim-2"]) +
-                "</td><td>" + (r["Pemenang"] ? '<span class="badge-win">' + esc(r["Pemenang"]) + "</span>" : "-") +
-                "</td><td>" + esc(r["Tanggal"]) + "</td></tr>"
-            ).join("") || '<tr><td colspan="7" style="text-align:center;color:#666;">Tidak ada data.</td></tr>';
+                esc(r["Tanggal"]) + "</td></tr>"
+            ).join("") || '<tr><td colspan="3" style="text-align:center;color:#666;">Tidak ada data.</td></tr>';
 
             document.getElementById("winnerModal").hidden = false;
         }

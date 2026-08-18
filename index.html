@@ -48,6 +48,11 @@
         .badge-win { background: #e8f5e9; color: #2e7d32; padding: 2px 8px; border-radius: 12px; font-size: 12px; }
         #kelasTableWrap { width: auto; margin: 0 auto; }
         #kelasTableWrap th, #kelasTableWrap td { padding: 6px 18px; font-size: 13px; }
+        #pemenangWrap { width: auto; margin: 0 auto; }
+        #pemenangWrap th, #pemenangWrap td { padding: 6px 18px; font-size: 13px; }
+        #pemenangWrap th:nth-child(1), #pemenangWrap td:nth-child(1) { width: 1%; text-align: center; white-space: nowrap; padding: 6px 8px; }
+        #pemenangWrap th:nth-child(3), #pemenangWrap td:nth-child(3) { width: 44px; text-align: right; white-space: nowrap; padding: 6px 8px; }
+        #pemenangWrap th { text-align: center; }
         .error { background: #ffebee; color: #b71c1c; padding: 16px; border-radius: 8px; margin-bottom: 20px; }
         .error:not([hidden]) { display: block; }
         .hidden-msg:not([hidden]) { display: block; }
@@ -117,6 +122,19 @@
                 </thead>
                 <tbody id="kelasTable"></tbody>
             </table>
+        </div>
+
+        <div class="sect">
+            <h2 class="center">Pemenang</h2>
+            <div class="table-scroll" id="pemenangWrap">
+                <table id="pemenangTable">
+                    <thead>
+                        <tr><th>No</th><th>Pemenang</th><th>Total</th></tr>
+                    </thead>
+                    <tbody id="pemenangList"></tbody>
+                </table>
+            </div>
+            <p class="sub hidden-msg" id="pemenangEmpty" hidden>Tidak ada data pemenang.</p>
         </div>
 
         <div class="sect">
@@ -195,6 +213,7 @@
         let internalRecords = [];
         let pendingRecords = [];
         let allRecords = [];
+        let winnerSummary = [];
 
         function parseCSV(text) {
             const rows = [];
@@ -312,6 +331,7 @@
                 pendTanggals.map(t => '<option>' + esc(t) + "</option>").join("");
 
             render(pending, totalLomba, totalCount, winners, allTotal);
+            renderWinners();
             renderInternal();
             renderPending();
         }
@@ -342,6 +362,49 @@
         function card(num, label, cls) {
             return '<div class="card ' + cls + '"><div class="num">' + num +
                 '</div><div class="lbl">' + label + "</div></div>";
+        }
+
+        function renderWinners() {
+            const counts = {};
+            internalRecords.forEach(r => {
+                counts[r["Pemenang"]] = (counts[r["Pemenang"]] || 0) + 1;
+            });
+            winnerSummary = Object.keys(counts).sort((a, b) =>
+                counts[b] - counts[a] || a.localeCompare(b)
+            );
+
+            const list = document.getElementById("pemenangList");
+            const emptyEl = document.getElementById("pemenangEmpty");
+            if (winnerSummary.length === 0) {
+                list.innerHTML = "";
+                emptyEl.hidden = false;
+                return;
+            }
+            emptyEl.hidden = true;
+            list.innerHTML = winnerSummary.map((name, i) =>
+                "<tr><td>" + (i + 1) + "</td><td>" + markHome(name) + "</td><td>" +
+                '<span class="winner-link" data-name="' + esc(name) + '" data-mode="name">' +
+                counts[name] + "</span></td></tr>"
+            ).join("");
+        }
+
+        function showWinnersByName(name) {
+            const list = allRecords.filter(r =>
+                r["Pemenang"] === name && r["Internal"].toUpperCase() === "TRUE"
+            ).sort(byIdAsc);
+
+            document.getElementById("modalHead").innerHTML =
+                "<tr><th>ID-No</th><th>Lomba</th><th>Tanggal</th></tr>";
+
+            document.getElementById("winnerModalTitle").textContent =
+                "Daftar Pemenang - " + name + " (" + list.length + ")";
+
+            document.getElementById("winnerList").innerHTML = list.map(r =>
+                "<tr><td>" + esc(r["ID-No"]) + "</td><td>" + esc(r["Deskripsi Lomba"]) + "</td><td>" +
+                esc(r["Tanggal"]) + "</td></tr>"
+            ).join("") || '<tr><td colspan="3" style="text-align:center;color:#666;">Tidak ada data.</td></tr>';
+
+            document.getElementById("winnerModal").hidden = false;
         }
 
         function showWinners(kelas) {
@@ -469,6 +532,12 @@
                 link.dataset.mode === "winner"
                     ? showWinners(link.dataset.kelas)
                     : showTotal(link.dataset.kelas);
+            });
+
+            document.getElementById("pemenangList").addEventListener("click", (e) => {
+                const link = e.target.closest(".winner-link");
+                if (!link) return;
+                showWinnersByName(link.dataset.name);
             });
 
             document.getElementById("winnerModalClose").addEventListener("click", hideWinners);

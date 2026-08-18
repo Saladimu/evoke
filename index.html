@@ -245,6 +245,12 @@
             return (b["Jam (mulai)"] || "").localeCompare(a["Jam (mulai)"] || "");
         }
 
+        function byIdAsc(a, b) {
+            const na = parseInt(String(a["ID-No"]).replace(/\D/g, ""), 10);
+            const nb = parseInt(String(b["ID-No"]).replace(/\D/g, ""), 10);
+            return na - nb;
+        }
+
         async function loadReport() {
             const controller = new AbortController();
             const timer = setTimeout(() => controller.abort(), 15000);
@@ -341,7 +347,7 @@
         function showWinners(kelas) {
             const list = allRecords.filter(r =>
                 r["Pemenang"] !== "" && r["Internal"].toUpperCase() === "TRUE" && r["Kelas"] === kelas
-            ).sort(byDateDesc);
+            ).sort(byIdAsc);
 
             document.getElementById("modalHead").innerHTML =
                 "<tr><th>ID-No</th><th>Lomba</th><th>Pemenang</th><th>Tanggal</th></tr>";
@@ -361,7 +367,7 @@
         function showTotal(kelas) {
             const list = allRecords.filter(r =>
                 r["Tanggal"] !== "" && r["Internal"].toUpperCase() === "TRUE" && r["Kelas"] === kelas
-            ).sort(byDateDesc);
+            ).sort(byIdAsc);
 
             document.getElementById("modalHead").innerHTML =
                 "<tr><th>ID-No</th><th>Deskripsi Lomba</th><th>Tanggal</th></tr>";

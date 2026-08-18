@@ -49,10 +49,24 @@
         #kelasTableWrap { width: auto; margin: 0 auto; }
         #kelasTableWrap th, #kelasTableWrap td { padding: 6px 18px; font-size: 13px; }
         #pemenangWrap { width: auto; margin: 0 auto; }
-        #pemenangWrap th, #pemenangWrap td { padding: 6px 18px; font-size: 13px; }
-        #pemenangWrap th:nth-child(1), #pemenangWrap td:nth-child(1) { width: 1%; text-align: center; white-space: nowrap; padding: 6px 8px; }
-        #pemenangWrap th:nth-child(3), #pemenangWrap td:nth-child(3) { width: 44px; text-align: right; white-space: nowrap; padding: 6px 8px; }
+        #pemenangWrap th, #pemenangWrap td { padding: 7px 14px; font-size: 13px; }
+        #pemenangWrap th:nth-child(1), #pemenangWrap td:nth-child(1) { width: 1%; text-align: center; white-space: nowrap; padding: 7px 6px; }
         #pemenangWrap th { text-align: center; }
+        #pemenangTable .rank { color: #8a94a6; font-weight: 600; }
+        #pemenangTable .view-hint { color: #007bff; font-size: 12px; margin-left: 8px; visibility: hidden; white-space: nowrap; }
+        #pemenangTable .bar-row { cursor: pointer; }
+        #pemenangTable .bar-row:hover td { background: #eef5ff; }
+        #pemenangTable .bar-row:hover .view-hint { visibility: visible; }
+        #pemenangTable .bar-row:hover .pname { text-decoration: underline; }
+        .bar-track { background: #e8ecf1; border-radius: 10px; height: 20px; width: 130px; max-width: 100%; overflow: hidden; }
+        .bar {
+            display: block; height: 100%; border-radius: 10px; color: #fff;
+            font-size: 12px; font-weight: 700; line-height: 20px; text-align: right;
+            padding-right: 8px; box-sizing: border-box; white-space: nowrap; min-width: 26px;
+        }
+        @media (max-width: 600px) {
+            .bar-track { width: 90px; }
+        }
         .error { background: #ffebee; color: #b71c1c; padding: 16px; border-radius: 8px; margin-bottom: 20px; }
         .error:not([hidden]) { display: block; }
         .hidden-msg:not([hidden]) { display: block; }
@@ -70,6 +84,19 @@
         .home-ic { color: #007bff; vertical-align: -2px; margin-right: 4px; }
         .winner-link { color: #007bff; cursor: pointer; text-decoration: underline; }
         .winner-link:hover { color: #0056b3; }
+        #pemenangTable .bar-row { cursor: pointer; }
+        #pemenangTable .bar-row:hover td { background: #eef5ff; }
+        #pemenangTable .bar-row:hover .view-hint { visibility: visible; }
+        #pemenangTable .bar-row:hover .pname { text-decoration: underline; }
+        .bar-track { background: #e8ecf1; border-radius: 10px; height: 20px; width: 130px; max-width: 100%; overflow: hidden; }
+        .bar {
+            display: block; height: 100%; border-radius: 10px; color: #fff;
+            font-size: 12px; font-weight: 700; line-height: 20px; text-align: right;
+            padding-right: 8px; box-sizing: border-box; white-space: nowrap; min-width: 26px;
+        }
+        @media (max-width: 600px) {
+            .bar-track { width: 90px; }
+        }
         @media (max-width: 900px) {
             .wrap { padding: 16px 12px 40px; }
             .stats { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
@@ -94,10 +121,10 @@
     </style>
 </head>
 <body>
-    <div class="nav-bar">
+    <div class="nav-bar" id="navBar">
         <a href="index.html" class="active">📊 Hasil Lomba</a>
-        <a href="events.html">🗓 Kalender Lomba</a>
-        <a href="feedback.html">📩 Feedback</a>
+        <a href="events.html" data-secret>🗓 Kalender Lomba</a>
+        <a href="feedback.html" data-secret>📩 Feedback</a>
     </div>
 
     <div class="wrap">
@@ -129,7 +156,7 @@
             <div class="table-scroll" id="pemenangWrap">
                 <table id="pemenangTable">
                     <thead>
-                        <tr><th>No</th><th>Pemenang</th><th>Total</th></tr>
+                        <tr><th>No</th><th>Pemenang</th><th>Lomba</th></tr>
                     </thead>
                     <tbody id="pemenangList"></tbody>
                 </table>
@@ -364,6 +391,9 @@
                 '</div><div class="lbl">' + label + "</div></div>";
         }
 
+        const BAR_COLORS = ["#e91e63", "#9c27b0", "#3f51b5", "#2196f3", "#00bcd4",
+            "#4caf50", "#ff9800", "#f44336", "#795548", "#607d8b"];
+
         function renderWinners() {
             const counts = {};
             internalRecords.forEach(r => {
@@ -381,11 +411,18 @@
                 return;
             }
             emptyEl.hidden = true;
-            list.innerHTML = winnerSummary.map((name, i) =>
-                "<tr><td>" + (i + 1) + "</td><td>" + markHome(name) + "</td><td>" +
-                '<span class="winner-link" data-name="' + esc(name) + '" data-mode="name">' +
-                counts[name] + "</span></td></tr>"
-            ).join("");
+
+            const maxCount = Math.max.apply(null, winnerSummary.map(n => counts[n]).concat(1));
+            list.innerHTML = winnerSummary.map((name, i) => {
+                const c = counts[name];
+                const w = Math.round((c / maxCount) * 100);
+                const color = BAR_COLORS[i % BAR_COLORS.length];
+                return "<tr class='bar-row' data-name='" + esc(name) + "' title='Lihat detail'>" +
+                    "<td><span class='rank'>" + (i + 1) + "</span></td>" +
+                    "<td class='pname'>" + markHome(name) + "<span class='view-hint'>Lihat →</span></td>" +
+                    "<td><div class='bar-track'><span class='bar' style='width:" + w +
+                    "%;background:" + color + ";'>" + c + "</span></div></td></tr>";
+            }).join("");
         }
 
         function showWinnersByName(name) {
@@ -535,9 +572,9 @@
             });
 
             document.getElementById("pemenangList").addEventListener("click", (e) => {
-                const link = e.target.closest(".winner-link");
-                if (!link) return;
-                showWinnersByName(link.dataset.name);
+                const row = e.target.closest(".bar-row");
+                if (!row) return;
+                showWinnersByName(row.dataset.name);
             });
 
             document.getElementById("winnerModalClose").addEventListener("click", hideWinners);
@@ -554,6 +591,32 @@
                 box.textContent = "Gagal memuat laporan: " + err.message;
                 document.getElementById("generatedAt").textContent = "";
             });
+        })();
+    </script>
+
+    <script>
+        (function () {
+            var bar = document.getElementById("navBar");
+            if (!bar) return;
+            var secretLinks = bar.querySelectorAll("[data-secret]");
+            var KEY = "evoke-extra-menu";
+            var clicks = 0;
+            var timer = null;
+            function apply() {
+                var on = localStorage.getItem(KEY) === "1";
+                secretLinks.forEach(function (a) { a.style.display = on ? "" : "none"; });
+            }
+            bar.addEventListener("click", function () {
+                clicks++;
+                clearTimeout(timer);
+                timer = setTimeout(function () { clicks = 0; }, 3000);
+                if (clicks >= 5) {
+                    clicks = 0;
+                    localStorage.setItem(KEY, localStorage.getItem(KEY) === "1" ? "0" : "1");
+                    apply();
+                }
+            });
+            apply();
         })();
     </script>
 </body>

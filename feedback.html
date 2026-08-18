@@ -15,14 +15,40 @@
 </head>
 <body>
     <!-- Top Menu Bar -->
-<div class="nav-bar">
+<div class="nav-bar" id="navBar">
     <a href="index.html">📊 Hasil Lomba</a>
-    <a href="events.html">🗓 Kalender Lomba</a>
-    <a href="feedback.html" style="color: #007bff;">📩 Feedback </a>
+    <a href="events.html" data-secret>🗓 Kalender Lomba</a>
+    <a href="feedback.html" style="color: #007bff;" data-secret>📩 Feedback </a>
 </div>
 
 
     <!-- Your Tally Form Embedded -->
     <iframe src="https://tally.so/r/J9YN1Y"></iframe>
+
+    <script>
+        (function () {
+            var bar = document.getElementById("navBar");
+            if (!bar) return;
+            var secretLinks = bar.querySelectorAll("[data-secret]");
+            var KEY = "evoke-extra-menu";
+            var clicks = 0;
+            var timer = null;
+            function apply() {
+                var on = localStorage.getItem(KEY) === "1";
+                secretLinks.forEach(function (a) { a.style.display = on ? "" : "none"; });
+            }
+            bar.addEventListener("click", function () {
+                clicks++;
+                clearTimeout(timer);
+                timer = setTimeout(function () { clicks = 0; }, 3000);
+                if (clicks >= 5) {
+                    clicks = 0;
+                    localStorage.setItem(KEY, localStorage.getItem(KEY) === "1" ? "0" : "1");
+                    apply();
+                }
+            });
+            apply();
+        })();
+    </script>
 </body>
 </html>

@@ -16,6 +16,18 @@ A lightweight live scores and event management site for **EVOKE 2 / Reventra (01
 
 A shared top navigation bar links all three pages, with the active tab highlighted.
 
+## Hidden Menu Toggle
+
+The **Kalender Lomba** (`events.html`) and **Feedback** (`feedback.html`) menu items are **hidden by default** on every page. Only the **Hasil Lomba** link is shown in the menu bar.
+
+To enable (or disable) them:
+
+1. Click **5 times** (within a 3-second window) anywhere in the top menu bar area — empty space, links, or padding all count.
+2. Each successful 5-click burst **toggles** the two hidden menu items ON or OFF.
+3. The choice is stored in `localStorage` (key `evoke-extra-menu`) and persists across pages and visits on the same device/browser.
+
+No hint or instruction about this gesture is shown anywhere in the UI.
+
 ## Live Score Report (`index.html`)
 
 The report page renders a summary dashboard plus two match tables, all computed client-side from the published Google Sheet CSV (fetched with `cache: "no-store"` so it always pulls the latest data; note that Google's published CSV endpoint can lag by a couple minutes after an edit).

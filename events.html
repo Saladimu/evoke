@@ -15,10 +15,10 @@
 </head>
 <body>
     <!-- Top Menu Bar -->
-    <div class="nav-bar">
+    <div class="nav-bar" id="navBar">
         <a href="index.html">📊 Hasil Lomba</a>
-        <a href="events.html" style="color: #007bff;">🗓 Kalender Lomba</a> <!-- Highlighted active tab -->
-        <a href="feedback.html">📩 Feedback </a>
+        <a href="events.html" style="color: #007bff;" data-secret>🗓 Kalender Lomba</a> <!-- Highlighted active tab -->
+        <a href="feedback.html" data-secret>📩 Feedback </a>
     </div>
 
     <!-- The iframe starts empty to prevent history corruption -->
@@ -51,6 +51,31 @@
         window.addEventListener('popstate', function () {
             window.location.href = "index.html";
         });
+
+        // 4. Hidden menu toggle: 5 clicks in the menu bar toggles Kalender Lomba / Feedback
+        (function () {
+            var bar = document.getElementById("navBar");
+            if (!bar) return;
+            var secretLinks = bar.querySelectorAll("[data-secret]");
+            var KEY = "evoke-extra-menu";
+            var clicks = 0;
+            var timer = null;
+            function apply() {
+                var on = localStorage.getItem(KEY) === "1";
+                secretLinks.forEach(function (a) { a.style.display = on ? "" : "none"; });
+            }
+            bar.addEventListener("click", function () {
+                clicks++;
+                clearTimeout(timer);
+                timer = setTimeout(function () { clicks = 0; }, 3000);
+                if (clicks >= 5) {
+                    clicks = 0;
+                    localStorage.setItem(KEY, localStorage.getItem(KEY) === "1" ? "0" : "1");
+                    apply();
+                }
+            });
+            apply();
+        })();
     </script>
 
 </body>

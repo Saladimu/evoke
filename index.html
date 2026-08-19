@@ -23,6 +23,9 @@
         .card .lbl { font-size: 13px; color: #666; margin-top: 2px; }
         .pending { background: #fff8e1; }
         .done { background: #e8f5e9; }
+        .special { background: #fff; border: 2px solid #e53935; }
+        .special .num, .special .lbl { color: #e53935; }
+        .special .lbl { font-weight: 600; }
         table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; }
         th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid #eee; font-size: 14px; }
         th { background: #333; color: #fff; }
@@ -31,12 +34,14 @@
         .sect h2 { font-size: 18px; margin: 0 0 12px; }
         #pendingList td { text-align: left; }
         #pendingList th { text-align: center; }
-        #internalTable th, #internalTable td, #pendingTable th, #pendingTable td {
+        #internalTable th, #internalTable td, #pendingTable th, #pendingTable td,
+        #specialTable th, #specialTable td {
             padding: 8px 12px; font-size: 13px; white-space: nowrap;
         }
-        #internalTable td:nth-child(2), #pendingTable td:nth-child(2) { white-space: normal; }
-        #internalTable td:nth-child(1), #pendingTable td:nth-child(1) { font-weight: 600; color: #555; }
-        #internalTable th, #pendingTable th { font-size: 12px; text-transform: uppercase; letter-spacing: .4px; }
+        #internalTable td:nth-child(2), #pendingTable td:nth-child(2), #specialTable td:nth-child(2) { white-space: normal; }
+        #internalTable td:nth-child(1), #pendingTable td:nth-child(1), #specialTable td:nth-child(1) { font-weight: 600; color: #555; }
+        #internalTable th, #pendingTable th, #specialTable th { font-size: 12px; text-transform: uppercase; letter-spacing: .4px; }
+        #specialTable td:nth-child(6) { white-space: normal; min-width: 180px; }
         #kelasTableWrap td:nth-child(2), #kelasTableWrap td:nth-child(3) { text-align: right; }
         .filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 14px; }
         .filters select, .filters input {
@@ -102,8 +107,9 @@
             .stats { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
         }
         @media (max-width: 600px) {
-            #internalTable th, #internalTable td, #pendingTable th, #pendingTable td { font-size: 12px; padding: 6px 8px; }
-            #internalTable td:nth-child(2), #pendingTable td:nth-child(2) { min-width: 180px; }
+            #internalTable th, #internalTable td, #pendingTable th, #pendingTable td,
+            #specialTable th, #specialTable td { font-size: 12px; padding: 6px 8px; }
+            #internalTable td:nth-child(2), #pendingTable td:nth-child(2), #specialTable td:nth-child(2) { min-width: 180px; }
             .nav-bar { padding: 8px 10px; gap: 12px; }
             .nav-bar a { font-size: 14px; }
             .header { gap: 8px; }
@@ -217,6 +223,33 @@
             </div>
             <p class="sub hidden-msg" id="pendingEmpty" hidden>Tidak ada pertandingan pending.</p>
         </div>
+
+        <div class="sect">
+            <h2>Special Note</h2>
+            <div class="filters">
+                <select id="fltSpecKelas">
+                    <option value="">Semua Kelas</option>
+                    <option>SD</option>
+                    <option>SMP</option>
+                    <option>SMA</option>
+                    <option>Gabungan</option>
+                </select>
+                <select id="fltSpecTanggal">
+                    <option value="">Semua Tanggal</option>
+                </select>
+                <input type="text" id="fltSpecSearch" placeholder="Cari lomba / tim / note...">
+            </div>
+            <p class="count" id="specialCount"></p>
+            <div class="table-scroll">
+                <table id="specialTable">
+                    <thead>
+                        <tr><th>ID-No</th><th>Lomba</th><th>Tanggal</th><th>Jam</th><th>PIC</th><th>Note</th></tr>
+                    </thead>
+                    <tbody id="specialList"></tbody>
+                </table>
+            </div>
+            <p class="sub hidden-msg" id="specialEmpty" hidden>Tidak ada special note.</p>
+        </div>
     </div>
 
     <div id="winnerModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="winnerModalTitle" hidden>
@@ -239,6 +272,7 @@
         const KELAS = ["SD", "SMP", "SMA", "Gabungan"];
         let internalRecords = [];
         let pendingRecords = [];
+        let specialRecords = [];
         let allRecords = [];
         let winnerSummary = [];
 
@@ -328,6 +362,11 @@
             );
             internalRecords = internal;
 
+            const special = records.filter(r =>
+                r["Tanggal"] !== "" && String(r["Note"] || "").indexOf("Info:") !== -1
+            );
+            specialRecords = special;
+
             const totalLomba = internal.length;
 
             const totalCount = {};
@@ -357,10 +396,18 @@
             ptSel.innerHTML = '<option value="">Semua Tanggal</option>' +
                 pendTanggals.map(t => '<option>' + esc(t) + "</option>").join("");
 
+            const specTanggals = [...new Set(special.map(r => r["Tanggal"]).filter(Boolean))].sort((a, b) =>
+                parseDate(a) - parseDate(b)
+            );
+            const stSel = document.getElementById("fltSpecTanggal");
+            stSel.innerHTML = '<option value="">Semua Tanggal</option>' +
+                specTanggals.map(t => '<option>' + esc(t) + "</option>").join("");
+
             render(pending, totalLomba, totalCount, winners, allTotal);
             renderWinners();
             renderInternal();
             renderPending();
+            renderSpecial();
         }
 
         function render(pending, totalLomba, totalCount, winners, allTotal) {
@@ -369,7 +416,8 @@
             document.getElementById("statCards").innerHTML = [
                 card(grandTotal, "Total Lomba Terjadwal", ""),
                 card(pending.length, "Lomba terjadwal (Pending)", "pending"),
-                card(totalLomba, "Total Lomba (Selesai)", "done")
+                card(totalLomba, "Total Lomba (Selesai)", "done"),
+                card(specialRecords.length, "Special Note", "special")
             ].join("");
 
             document.getElementById("kelasTable").innerHTML = KELAS.map(k =>
@@ -494,7 +542,8 @@
 
             const searchFields = (r) =>
                 r["Deskripsi Lomba"] + " " + r["Tim-1"] + " " + r["Tim-2"] + " " +
-                (r["Pemenang"] || "") + " " + r["Kelas"];
+                (r["Pemenang"] || "") + " " + r["Kelas"] + " " +
+                (r["PIC"] || "") + " " + (r["Note"] || "");
 
             let rows = cfg.records.filter(r =>
                 (!kelas || r["Kelas"] === kelas) &&
@@ -553,6 +602,23 @@
             });
         }
 
+        function renderSpecial() {
+            renderTable({
+                records: specialRecords,
+                fltKelas: "fltSpecKelas",
+                fltTanggal: "fltSpecTanggal",
+                fltSearch: "fltSpecSearch",
+                countId: "specialCount",
+                countSuffix: " special note",
+                listId: "specialList",
+                emptyId: "specialEmpty",
+                renderRow: r =>
+                    "<tr><td>" + esc(r["ID-No"]) + "</td><td>" + esc(r["Deskripsi Lomba"]) + "</td><td>" +
+                    esc(r["Tanggal"]) + "</td><td>" + esc(r["Jam (mulai)"]) + "</td><td>" + esc(r["PIC"]) +
+                    "</td><td>" + esc(String(r["Note"]).replace(/Info\s*:/gi, "")) + "</td></tr>"
+            });
+        }
+
         (function () {
             ["fltKelas", "fltTanggal", "fltSearch"].forEach(id => {
                 document.getElementById(id).addEventListener(
@@ -561,6 +627,10 @@
             ["fltPendKelas", "fltPendTanggal", "fltPendSearch"].forEach(id => {
                 document.getElementById(id).addEventListener(
                     id === "fltPendSearch" ? "input" : "change", renderPending);
+            });
+            ["fltSpecKelas", "fltSpecTanggal", "fltSpecSearch"].forEach(id => {
+                document.getElementById(id).addEventListener(
+                    id === "fltSpecSearch" ? "input" : "change", renderSpecial);
             });
 
             document.getElementById("kelasTable").addEventListener("click", (e) => {

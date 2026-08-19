@@ -37,6 +37,15 @@ The report page renders a summary dashboard plus two match tables, all computed 
 1. **Total Lomba Terjadwal** — rows with `Tanggal` filled and `Kelas` in SD/SMP/SMA/Gabungan.
 2. **Lomba terjadwal (Pending)** — rows where `Tanggal` is filled, `Pemenang` is empty, and both `Tim-1` and `Tim-2` are filled.
 3. **Total Lomba (Selesai)** — rows where `Tanggal` is filled, `Pemenang` is filled, and `Internal = TRUE`.
+4. **Special Note** — rows where `Tanggal` is filled and the `Note` column contains `Info:` (white card with a red border and red number).
+
+### Pemenang
+
+The **Pemenang** table ranks winners by number of internal matches won, with each count rendered as a **colorful horizontal bar** (width proportional to the top winner, count value shown inside the bar) under a **Lomba** column:
+
+- Ranked number, winner name, and the proportional bar.
+- Hovering a row highlights it and reveals a **Lihat →** hint.
+- Clicking any row opens the winner's match list in a modal.
 
 ### Summary Lomba
 
@@ -49,8 +58,9 @@ Per-kelas breakdown (SD, SMP, SMA, Gabungan) of internal-only matches (`Internal
 
 - **Total Lomba (Selesai)** — completed internal matches, sorted by date descending. Filters: Kelas, Tanggal, and text search.
 - **Lomba terjadwal (Pending)** — scheduled matches without a winner. Same filters as the table above, plus a PIC column.
+- **Special Note** — matches where `Note` contains `Info:` (the `Info:` marker is stripped from the displayed note). Columns: ID-No, Lomba, Tanggal, Jam, PIC, Note. Same filters as the other tables; text search also covers PIC and Note.
 
-Both tables are horizontally scrollable on narrow screens.
+All tables are horizontally scrollable on narrow screens.
 
 ## How It Works
 

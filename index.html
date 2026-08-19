@@ -65,10 +65,13 @@
         #pemenangTable .bar-row:hover .pname { text-decoration: underline; }
         .bar-track { background: #e8ecf1; border-radius: 10px; height: 20px; width: 130px; max-width: 100%; overflow: hidden; }
         .bar {
-            display: block; height: 100%; border-radius: 10px; color: #fff;
-            font-size: 12px; font-weight: 700; line-height: 20px; text-align: right;
-            padding-right: 8px; box-sizing: border-box; white-space: nowrap; min-width: 26px;
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 5px; height: 100%; border-radius: 10px; color: #fff;
+            font-size: 12px; font-weight: 700; box-sizing: border-box;
+            padding: 0 7px 0 4px; white-space: nowrap; min-width: 40px;
         }
+        .bar .trophy { width: 12px; height: 12px; flex: none; }
+        .bar .bar-num { margin-left: auto; line-height: 1; }
         @media (max-width: 600px) {
             .bar-track { width: 90px; }
         }
@@ -89,19 +92,6 @@
         .home-ic { color: #007bff; vertical-align: -2px; margin-right: 4px; }
         .winner-link { color: #007bff; cursor: pointer; text-decoration: underline; }
         .winner-link:hover { color: #0056b3; }
-        #pemenangTable .bar-row { cursor: pointer; }
-        #pemenangTable .bar-row:hover td { background: #eef5ff; }
-        #pemenangTable .bar-row:hover .view-hint { visibility: visible; }
-        #pemenangTable .bar-row:hover .pname { text-decoration: underline; }
-        .bar-track { background: #e8ecf1; border-radius: 10px; height: 20px; width: 130px; max-width: 100%; overflow: hidden; }
-        .bar {
-            display: block; height: 100%; border-radius: 10px; color: #fff;
-            font-size: 12px; font-weight: 700; line-height: 20px; text-align: right;
-            padding-right: 8px; box-sizing: border-box; white-space: nowrap; min-width: 26px;
-        }
-        @media (max-width: 600px) {
-            .bar-track { width: 90px; }
-        }
         @media (max-width: 900px) {
             .wrap { padding: 16px 12px 40px; }
             .stats { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
@@ -441,6 +431,7 @@
 
         const BAR_COLORS = ["#e91e63", "#9c27b0", "#3f51b5", "#2196f3", "#00bcd4",
             "#4caf50", "#ff9800", "#f44336", "#795548", "#607d8b"];
+        const TROPHY_ICON = '<svg class="trophy" viewBox="0 0 24 24" fill="#ffd700" aria-hidden="true"><path d="M20 7h-2V5h-4V3h-4v2H6v2H4v3c0 2.97 2.16 5.43 5 5.91V19H7v2h10v-2h-2v-3.09C17.84 15.43 20 12.97 20 10V7zM6 10H4V7h2v3zm12 0h-2V7h2v3z"/></svg>';
 
         function renderWinners() {
             const counts = {};
@@ -469,7 +460,8 @@
                     "<td><span class='rank'>" + (i + 1) + "</span></td>" +
                     "<td class='pname'>" + markHome(name) + "<span class='view-hint'>Lihat →</span></td>" +
                     "<td><div class='bar-track'><span class='bar' style='width:" + w +
-                    "%;background:" + color + ";'>" + c + "</span></div></td></tr>";
+                    "%;background:" + color + ";'>" + TROPHY_ICON +
+                    "<span class='bar-num'>" + c + "</span></span></div></td></tr>";
             }).join("");
         }
 

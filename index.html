@@ -6,6 +6,15 @@
     <meta name="description" content="EVOKE 2 - Reventra (01-10 Oct 2026) Live Score Report: hasil lomba real-time, statistik per kelas, dan daftar pertandingan.">
     <title>EVOKE 2 - Live Score Report</title>
     <link rel="icon" type="image/png" href="favicon.png">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem("evoke-theme") === "dark") {
+                    document.documentElement.classList.add("dark");
+                }
+            } catch (e) {}
+        })();
+    </script>
     <style>
         body { margin: 0; font-family: sans-serif; background: #f4f6f8; color: #222; }
         .nav-bar { background: #333; padding: 10px 20px; display: flex; gap: 20px; }
@@ -114,6 +123,40 @@
             .modal-content { max-height: 85vh; }
             .modal-head { font-size: 14px; padding: 12px 14px; }
         }
+        .theme-toggle {
+            margin-left: auto; background: none; border: none; cursor: pointer;
+            color: #fff; padding: 2px; display: flex; align-items: center; border-radius: 6px;
+        }
+        .theme-toggle:hover { background: rgba(255,255,255,.12); }
+        .theme-toggle svg { width: 20px; height: 20px; display: block; }
+        .theme-toggle .icon-sun { display: none; }
+        .dark .theme-toggle .icon-sun { display: block; }
+        .dark .theme-toggle .icon-moon { display: none; }
+
+        .dark { color-scheme: dark; }
+        .dark body { background: #121417; color: #e8e8e8; }
+        .dark .nav-bar { background: #1b2024; }
+        .dark .card, .dark table, .dark .modal-content,
+        .dark .filters select, .dark .filters input { background: #1e2226; color: #e8e8e8; }
+        .dark th { background: #2a3036; color: #fff; }
+        .dark th, .dark td { border-color: #333a42; }
+        .dark .pending { background: #3a3222; }
+        .dark .done { background: #233329; }
+        .dark .special { background: #1e2226; }
+        .dark .winner-link { color: #4da3ff; }
+        .dark .winner-link:hover { color: #7ab8ff; }
+        .dark .bar-track { background: #2a3036; }
+        .dark #pemenangTable .bar-row:hover td { background: #232b36; }
+        .dark .table-scroll { box-shadow: 0 1px 4px rgba(0,0,0,.4); }
+        .dark .error { background: #3a2020; color: #ff8a80; }
+        .dark .modal { background: rgba(0,0,0,.6); }
+        .dark .count, .dark .sub { color: #9aa2ab; }
+        .dark .home-ic { color: #4da3ff; }
+        .dark .view-hint { color: #4da3ff; }
+        .dark .modal-close { color: #bbb; }
+        .dark .modal-close:hover { color: #fff; }
+        .dark .badge-win { background: #233329; color: #81c784; }
+        .dark .rank { color: #9aa2ab; }
     </style>
 </head>
 <body>
@@ -121,6 +164,10 @@
         <a href="index.html" class="active">📊 Hasil Lomba</a>
         <a href="events.html" data-secret>🗓 Kalender Lomba</a>
         <a href="feedback.html" data-secret>📩 Feedback</a>
+        <button id="themeToggle" class="theme-toggle" aria-label="Ganti tema" aria-pressed="false">
+            <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
     </div>
 
     <div class="wrap">
@@ -679,6 +726,19 @@
                 }
             });
             apply();
+        })();
+
+        (function () {
+            var btn = document.getElementById("themeToggle");
+            if (!btn) return;
+            var dark = document.documentElement.classList.contains("dark");
+            btn.setAttribute("aria-pressed", dark ? "true" : "false");
+            btn.addEventListener("click", function () {
+                dark = !dark;
+                document.documentElement.classList.toggle("dark", dark);
+                try { localStorage.setItem("evoke-theme", dark ? "dark" : "light"); } catch (e) {}
+                btn.setAttribute("aria-pressed", dark ? "true" : "false");
+            });
         })();
     </script>
 </body>

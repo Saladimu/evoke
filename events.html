@@ -5,12 +5,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EVOKE 2 - Kalender Lomba</title>
     <link rel="icon" type="image/png" href="favicon.png">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem("evoke-theme") === "dark") {
+                    document.documentElement.classList.add("dark");
+                }
+            } catch (e) {}
+        })();
+    </script>
     <style>
         body, html { margin: 0; padding: 0; height: 100%; display: flex; flex-direction: column; overflow: hidden; font-family: sans-serif; }
         .nav-bar { background: #333; padding: 10px 20px; display: flex; gap: 20px; }
         .nav-bar a { color: white; text-decoration: none; font-weight: bold; font-size: 18px; }
         .nav-bar a:hover { color: #007bff; }
         iframe { width: 100%; flex-grow: 1; border: none; }
+        .theme-toggle {
+            margin-left: auto; background: none; border: none; cursor: pointer;
+            color: #fff; padding: 2px; display: flex; align-items: center; border-radius: 6px;
+        }
+        .theme-toggle:hover { background: rgba(255,255,255,.12); }
+        .theme-toggle svg { width: 20px; height: 20px; display: block; }
+        .theme-toggle .icon-sun { display: none; }
+        .dark .theme-toggle .icon-sun { display: block; }
+        .dark .theme-toggle .icon-moon { display: none; }
+        .dark { color-scheme: dark; }
+        .dark body { background: #121417; }
+        .dark .nav-bar { background: #1b2024; }
     </style>
 </head>
 <body>
@@ -19,6 +40,10 @@
         <a href="index.html">📊 Hasil Lomba</a>
         <a href="events.html" style="color: #007bff;" data-secret>🗓 Kalender Lomba</a> <!-- Highlighted active tab -->
         <a href="feedback.html" data-secret>📩 Feedback </a>
+        <button id="themeToggle" class="theme-toggle" aria-label="Ganti tema" aria-pressed="false">
+            <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
     </div>
 
     <!-- The iframe starts empty to prevent history corruption -->
@@ -75,6 +100,19 @@
                 }
             });
             apply();
+        })();
+
+        (function () {
+            var btn = document.getElementById("themeToggle");
+            if (!btn) return;
+            var dark = document.documentElement.classList.contains("dark");
+            btn.setAttribute("aria-pressed", dark ? "true" : "false");
+            btn.addEventListener("click", function () {
+                dark = !dark;
+                document.documentElement.classList.toggle("dark", dark);
+                try { localStorage.setItem("evoke-theme", dark ? "dark" : "light"); } catch (e) {}
+                btn.setAttribute("aria-pressed", dark ? "true" : "false");
+            });
         })();
     </script>
 

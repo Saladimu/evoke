@@ -157,6 +157,27 @@
         .dark .modal-close:hover { color: #fff; }
         .dark .badge-win { background: #233329; color: #81c784; }
         .dark .rank { color: #9aa2ab; }
+        .dark .wall-area {
+            position: relative;
+            border-radius: 12px;
+            padding: 4px 12px 24px;
+            background: linear-gradient(rgba(18, 20, 23, 0.72), rgba(18, 20, 23, 0.72)),
+                url('desktop-wall.png') center top / cover no-repeat;
+        }
+        @media (max-width: 600px) {
+            .dark .wall-area {
+                margin: 0 -12px;
+                background: linear-gradient(rgba(18, 20, 23, 0.72), rgba(18, 20, 23, 0.72)),
+                    url('mobile-wall.png') center top / cover no-repeat;
+            }
+            .dark .wall-area .sect h2,
+            .dark .wall-area .count {
+                display: inline-block;
+                background: rgba(0, 0, 0, 0.35);
+                padding: 6px 12px;
+                border-radius: 8px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -207,6 +228,7 @@
             <p class="sub hidden-msg" id="pemenangEmpty" hidden>Tidak ada data pemenang.</p>
         </div>
 
+        <div class="wall-area">
         <div class="sect">
             <h2>Total Lomba (Selesai)</h2>
             <div class="filters">
@@ -287,6 +309,7 @@
             </div>
             <p class="sub hidden-msg" id="specialEmpty" hidden>Tidak ada special note.</p>
         </div>
+        </div>
     </div>
 
     <div id="winnerModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="winnerModalTitle" hidden>
@@ -356,10 +379,39 @@
             return new Date(s.replace(/(\d+)-(\w+)-(\d+)/, "$2 $1 $3"));
         }
 
+        const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+            "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+        function formatTanggal(s) {
+            const t = String(s).trim();
+            const m = t.match(/^(\d{1,2})[\s.-]+([A-Za-z]+|\d{1,2})(?:[\s.-]+\d{2,4})?/);
+            if (!m) return t;
+            const day = ("0" + m[1]).slice(-2);
+            let mon = m[2];
+            if (/^\d{1,2}$/.test(mon)) {
+                const idx = parseInt(mon, 10);
+                mon = (idx >= 1 && idx <= 12) ? MONTHS[idx - 1] : mon;
+            } else {
+                mon = mon.charAt(0).toUpperCase() + mon.slice(1, 3).toLowerCase();
+            }
+            return day + "-" + mon;
+        }
+
+        function jamMinutes(s) {
+            const m = String(s || "").trim().match(/(\d{1,2}):(\d{2})\s*([APap][Mm])?/);
+            if (!m) return 0;
+            let h = parseInt(m[1], 10);
+            const min = parseInt(m[2], 10);
+            const ap = (m[3] || "").toUpperCase();
+            if (ap === "PM" && h < 12) h += 12;
+            if (ap === "AM" && h === 12) h = 0;
+            return h * 60 + min;
+        }
+
         function byDateDesc(a, b) {
             const diff = parseDate(b["Tanggal"]) - parseDate(a["Tanggal"]);
             if (diff !== 0) return diff;
-            return (b["Jam (mulai)"] || "").localeCompare(a["Jam (mulai)"] || "");
+            return jamMinutes(b["Jam (mulai)"]) - jamMinutes(a["Jam (mulai)"]);
         }
 
         function byIdAsc(a, b) {
@@ -424,21 +476,21 @@
             );
             const tgSel = document.getElementById("fltTanggal");
             tgSel.innerHTML = '<option value="">Semua Tanggal</option>' +
-                tanggals.map(t => '<option>' + esc(t) + "</option>").join("");
+                tanggals.map(t => '<option value="' + esc(t) + '">' + esc(formatTanggal(t)) + "</option>").join("");
 
             const pendTanggals = [...new Set(pending.map(r => r["Tanggal"]).filter(Boolean))].sort((a, b) =>
                 parseDate(a) - parseDate(b)
             );
             const ptSel = document.getElementById("fltPendTanggal");
             ptSel.innerHTML = '<option value="">Semua Tanggal</option>' +
-                pendTanggals.map(t => '<option>' + esc(t) + "</option>").join("");
+                pendTanggals.map(t => '<option value="' + esc(t) + '">' + esc(formatTanggal(t)) + "</option>").join("");
 
             const specTanggals = [...new Set(special.map(r => r["Tanggal"]).filter(Boolean))].sort((a, b) =>
                 parseDate(a) - parseDate(b)
             );
             const stSel = document.getElementById("fltSpecTanggal");
             stSel.innerHTML = '<option value="">Semua Tanggal</option>' +
-                specTanggals.map(t => '<option>' + esc(t) + "</option>").join("");
+                specTanggals.map(t => '<option value="' + esc(t) + '">' + esc(formatTanggal(t)) + "</option>").join("");
 
             render(pending, totalLomba, totalCount, winners, allTotal);
             renderWinners();
@@ -620,7 +672,7 @@
                     "<tr><td>" + esc(r["ID-No"]) + "</td><td>" + esc(r["Deskripsi Lomba"]) + "</td><td>" +
                     markHome(r["Tim-1"]) + "</td><td>" + markHome(r["Tim-2"]) +
                     '</td><td><span class="badge-win">' + markHome(r["Pemenang"]) + "</span></td>" +
-                    "<td>" + esc(r["Tanggal"]) + "</td><td>" + esc(r["Jam (mulai)"]) + "</td></tr>"
+                    "<td>" + esc(formatTanggal(r["Tanggal"])) + "</td><td>" + esc(r["Jam (mulai)"]) + "</td></tr>"
             });
         }
 
@@ -636,7 +688,7 @@
                 emptyId: "pendingEmpty",
                 renderRow: r =>
                     "<tr><td>" + esc(r["ID-No"]) + "</td><td>" + esc(r["Deskripsi Lomba"]) + "</td><td>" +
-                    markHome(r["Tim-1"]) + "</td><td>" + markHome(r["Tim-2"]) + "</td><td>" + esc(r["Tanggal"]) +
+                    markHome(r["Tim-1"]) + "</td><td>" + markHome(r["Tim-2"]) + "</td><td>" + esc(formatTanggal(r["Tanggal"])) +
                     "</td><td>" + esc(r["Jam (mulai)"]) + "</td><td>" + esc(r["PIC"]) + "</td></tr>"
             });
         }
@@ -653,7 +705,7 @@
                 emptyId: "specialEmpty",
                 renderRow: r =>
                     "<tr><td>" + esc(r["ID-No"]) + "</td><td>" + esc(r["Deskripsi Lomba"]) + "</td><td>" +
-                    esc(r["Tanggal"]) + "</td><td>" + esc(r["Jam (mulai)"]) + "</td><td>" + esc(r["PIC"]) +
+                    esc(formatTanggal(r["Tanggal"])) + "</td><td>" + esc(r["Jam (mulai)"]) + "</td><td>" + esc(r["PIC"]) +
                     "</td><td>" + esc(String(r["Note"]).replace(/Info\s*:/gi, "")) + "</td></tr>"
             });
         }

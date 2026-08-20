@@ -16,6 +16,16 @@ A lightweight live scores and event management site for **EVOKE 2 / Reventra (01
 
 A shared top navigation bar links all three pages, with the active tab highlighted.
 
+## Dark / Light Theme
+
+A sun/moon toggle button on the right side of the top menu bar switches between light and dark themes on every page:
+
+- The choice is stored in `localStorage` (key `evoke-theme`) and applied before the page renders (no flash).
+- In dark mode, a wallpaper background appears behind the content after the **Pemenang** table:
+  - `desktop-wall.png` on screens wider than 600px, `mobile-wall.png` on phones.
+  - The image is dimmed with a dark overlay (~28% effective opacity) to keep all info readable, and section headings/counts get a soft backdrop.
+  - The three lower tables (**Total Lomba (Selesai)**, **Lomba terjadwal (Pending)**, **Special Note**) are semi-transparent so the wallpaper shows through them.
+
 ## Hidden Menu Toggle
 
 The **Kalender Lomba** (`events.html`) and **Feedback** (`feedback.html`) menu items are **hidden by default** on every page. Only the **Hasil Lomba** link is shown in the menu bar.
@@ -41,7 +51,7 @@ The report page renders a summary dashboard plus two match tables, all computed 
 
 ### Pemenang
 
-The **Pemenang** table ranks winners by number of internal matches won, with each count rendered as a **colorful horizontal bar** (width proportional to the top winner, count value shown inside the bar) under a **Lomba** column:
+The **Pemenang** table ranks winners by number of internal matches won, with each count rendered as a **colorful horizontal bar** (width proportional to the top winner, count value shown inside the bar with a gold trophy icon) under a **Lomba** column:
 
 - Ranked number, winner name, and the proportional bar.
 - Hovering a row highlights it and reveals a **Lihat →** hint.
@@ -56,11 +66,11 @@ Per-kelas breakdown (SD, SMP, SMA, Gabungan) of internal-only matches (`Internal
 
 ### Tables
 
-- **Total Lomba (Selesai)** — completed internal matches, sorted by date descending. Filters: Kelas, Tanggal, and text search.
+- **Total Lomba (Selesai)** — completed internal matches, sorted by **date + time descending**. Filters: Kelas, Tanggal, and text search.
 - **Lomba terjadwal (Pending)** — scheduled matches without a winner. Same filters as the table above, plus a PIC column.
 - **Special Note** — matches where `Note` contains `Info:` (the `Info:` marker is stripped from the displayed note). Columns: ID-No, Lomba, Tanggal, Jam, PIC, Note. Same filters as the other tables; text search also covers PIC and Note.
 
-All tables are horizontally scrollable on narrow screens.
+Dates are displayed in **`DD-Mmm`** format (e.g. `05-Oct`) in all three tables and in the Tanggal filter dropdowns. All tables are horizontally scrollable on narrow screens.
 
 ## How It Works
 
@@ -80,6 +90,8 @@ All tables are horizontally scrollable on narrow screens.
 ├── feedback.html         # Feedback page (Tally form embed)
 ├── favicon.png           # Site favicon
 ├── reventraicon.png      # Reventra logo shown in the report header
+├── mobile-wall.png       # Dark-mode wallpaper used on phones
+├── desktop-wall.png      # Dark-mode wallpaper used on wider screens
 └── functions/
     └── API/
         └── data.js       # Optional Cloudflare Pages Function (currently unused by the report)

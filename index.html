@@ -410,6 +410,7 @@
         let specialRecords = [];
         let allRecords = [];
         let winnerSummary = [];
+        let sheetTimeStr = "";
 
         function parseCSV(text) {
             const rows = [];
@@ -456,6 +457,11 @@
 
         const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
             "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+        function fmtHHMMSS(d) {
+            const p = n => ("0" + n).slice(-2);
+            return p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+        }
 
         function formatTanggal(s) {
             const t = String(s).trim();
@@ -509,6 +515,10 @@
             }
             clearTimeout(timer);
             if (!res.ok) throw new Error("Gagal mengambil data sheet (HTTP " + res.status + ")");
+            try {
+                const hdr = res.headers.get("Date");
+                if (hdr) sheetTimeStr = fmtHHMMSS(new Date(hdr));
+            } catch (e) { /* ignore header parse errors */ }
             const csv = await res.text();
             const rows = parseCSV(csv);
             if (rows.length < 2) throw new Error("Tidak ada data di sheet.");
@@ -595,7 +605,8 @@
             ).join("");
 
             document.getElementById("generatedAt").textContent =
-                "Evoke - Reventra (01-10 Oct 2026). Diperbarui " + new Date().toLocaleString("id-ID");
+                "Evoke - Reventra (01-10 Oct 2026). Diperbarui " +
+                (sheetTimeStr || fmtHHMMSS(new Date()));
         }
 
         function card(num, label, cls) {

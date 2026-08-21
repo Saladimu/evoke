@@ -10,9 +10,9 @@ A lightweight live scores and event management site for **EVOKE 2 / Reventra (01
 
 | Page | Description |
 |------|-------------|
-| `index.html` | Live Score Report - Real-time competition report (statistics, filters, winner lists) fetched directly from a Google Sheet |
-| `events.html` | Kalender Lomba - Event match calendar, embedded from an AppSheet app |
-| `feedback.html` | Feedback - Feedback form, embedded via Tally |
+| [`index.html`](index.html) | Live Score Report - Real-time competition report (statistics, filters, winner lists) fetched directly from a Google Sheet |
+| [`events.html`](events.html) | Kalender Lomba - Event match calendar, embedded from an AppSheet app |
+| [`feedback.html`](feedback.html) | Feedback - Feedback form, embedded via Tally |
 
 A shared top navigation bar links all three pages, with the active tab highlighted.
 
@@ -21,14 +21,14 @@ A shared top navigation bar links all three pages, with the active tab highlight
 A sun/moon toggle button on the right side of the top menu bar switches between light and dark themes on every page:
 
 - The choice is stored in `localStorage` (key `evoke-theme`) and applied before the page renders (no flash).
-- In dark mode, a wallpaper background appears behind the content after the **Pemenang** table:
-  - `desktop-wall.png` on screens wider than 600px, `mobile-wall.png` on phones.
+- In dark mode, a wallpaper background appears behind the content after the [**Pemenang**](#pemenang) table:
+  - [`desktop-wall.png`](desktop-wall.png) on screens wider than 600px, [`mobile-wall.png`](mobile-wall.png) on phones.
   - The image is dimmed with a dark overlay (~28% effective opacity) to keep all info readable, and section headings/counts get a soft backdrop.
-  - The three lower tables (**Total Lomba (Selesai)**, **Lomba terjadwal (Pending)**, **Special Note**) are semi-transparent so the wallpaper shows through them.
+  - The three lower [tables](#tables) (**Total Lomba (Selesai)**, **Lomba terjadwal (Pending)**, **Special Note**) are semi-transparent so the wallpaper shows through them.
 
 ## Hidden Menu Toggle
 
-The **Kalender Lomba** (`events.html`) and **Feedback** (`feedback.html`) menu items are **hidden by default** on every page. Only the **Hasil Lomba** link is shown in the menu bar.
+The **Kalender Lomba** ([`events.html`](events.html)) and **Feedback** ([`feedback.html`](feedback.html)) menu items are **hidden by default** on every page. Only the **Hasil Lomba** ([`index.html`](index.html)) link is shown in the menu bar.
 
 To enable (or disable) them:
 
@@ -36,11 +36,11 @@ To enable (or disable) them:
 2. Each successful 5-click burst **toggles** the two hidden menu items ON or OFF.
 3. The choice is stored in `localStorage` (key `evoke-extra-menu`) and persists across pages and visits on the same device/browser.
 
-No hint or instruction about this gesture is shown anywhere in the UI.
+Note: No hint or instruction about this gesture is shown anywhere in the UI.
 
-## Live Score Report (`index.html`)
+## Live Score Report ([`index.html`](index.html))
 
-The report page renders a summary dashboard plus two match tables, all computed client-side from the published Google Sheet CSV (fetched with `cache: "no-store"` so it always pulls the latest data; note that Google's published CSV endpoint can lag by a couple minutes after an edit).
+The report page renders a summary dashboard plus three match tables, all computed client-side from the published Google Sheet CSV (fetched with `cache: "no-store"` so it always pulls the latest data; note that Google's published CSV endpoint can lag by a couple of minutes after an edit).
 
 ### Statistics Cards
 
@@ -76,14 +76,14 @@ Dates are displayed in **`DD-Mmm`** format (e.g. `05-Oct`) in all three tables a
 
 - **Static hosting on the edge**: The site is served entirely from Cloudflare's global edge network. Visitors never see the underlying GitHub repository.
 - **Live data via embedded apps**:
-  - The report in `index.html` fetches and parses the published Google Sheet CSV directly in the browser (the published CSV endpoint sends `Access-Control-Allow-Origin: *`, so no proxy is required).
-  - The calendar is powered by an AppSheet app.
-  - Feedback is collected through a Tally form.
+  - The report in [`index.html`](index.html) fetches and parses the published Google Sheet CSV directly in the browser (the published CSV endpoint sends `Access-Control-Allow-Origin: *`, so no proxy is required).
+  - The calendar in [`events.html`](events.html) is powered by an AppSheet app.
+  - Feedback in [`feedback.html`](feedback.html) is collected through a Tally form.
 - **Automatic deploys**: Every push to the `main` branch on GitHub triggers a Cloudflare Pages deployment, so the live site updates automatically (typically within 30 seconds).
 
 ## Project Structure
 
-```
+```text
 .
 ├── index.html            # Live Score Report (fetches Google Sheet CSV directly)
 ├── events.html           # Calendar page (AppSheet embed)
@@ -99,13 +99,13 @@ Dates are displayed in **`DD-Mmm`** format (e.g. `05-Oct`) in all three tables a
 
 ## Local Development
 
-No build step or package manager is required. Just serve the folder locally:
+No build step or package manager is required! Just serve the folder locally:
 
 ```bash
 python3 -m http.server 8000
 ```
 
-Then open <http://localhost:8000>.
+Then open <http://localhost:8000> in your browser.
 
 ## Deployment
 

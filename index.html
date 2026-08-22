@@ -30,6 +30,8 @@
         .card { background: #fff; border-radius: 10px; padding: 18px 20px; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
         .card .num { font-size: 34px; font-weight: bold; }
         .card .lbl { font-size: 13px; color: #666; margin-top: 2px; }
+        .card[data-goto] { cursor: pointer; transition: transform .15s ease, box-shadow .15s ease; }
+        .card[data-goto]:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0,0,0,.16); }
         .pending { background: #fff8e1; }
         .done { background: #e8f5e9; }
         .special { background: #fff; border: 2px solid #e53935; }
@@ -292,7 +294,7 @@
         </div>
 
         <div class="wall-area">
-        <div class="sect">
+        <div class="sect" id="sect-total">
             <h2>Total Lomba (Selesai)</h2>
             <div class="filters">
                 <select id="fltKelas">
@@ -323,7 +325,7 @@
             <p class="sub hidden-msg" id="internalEmpty" hidden>Tidak ada lomba internal yang selesai.</p>
         </div>
 
-        <div class="sect">
+        <div class="sect" id="sect-pending">
             <h2>Lomba terjadwal (Pending)</h2>
             <div class="filters">
                 <select id="fltPendKelas">
@@ -354,7 +356,7 @@
             <p class="sub hidden-msg" id="pendingEmpty" hidden>Tidak ada pertandingan pending.</p>
         </div>
 
-        <div class="sect">
+        <div class="sect" id="sect-special">
             <h2>Special Note</h2>
             <div class="filters">
                 <select id="fltSpecKelas">
@@ -585,10 +587,10 @@
             const grandTotal = KELAS.reduce((s, k) => s + allTotal[k], 0);
 
             document.getElementById("statCards").innerHTML = [
-                card(grandTotal, "Total Lomba Terjadwal", ""),
-                card(pending.length, "Lomba terjadwal (Pending)", "pending"),
-                card(totalLomba, "Total Lomba (Selesai)", "done"),
-                card(specialRecords.length, "Special Note", "special")
+                card(grandTotal, "Total Lomba Terjadwal", "", "sect-total"),
+                card(pending.length, "Lomba terjadwal (Pending)", "pending", "sect-pending"),
+                card(totalLomba, "Total Lomba (Selesai)", "done", "sect-total"),
+                card(specialRecords.length, "Special Note", "special", "sect-special")
             ].join("");
 
             document.getElementById("kelasTable").innerHTML = KELAS.map(k =>
@@ -606,9 +608,9 @@
                 (sheetTimeStr || fmtHHMMSS(new Date()));
         }
 
-        function card(num, label, cls) {
-            return '<div class="card ' + cls + '"><div class="num">' + num +
-                '</div><div class="lbl">' + label + "</div></div>";
+        function card(num, label, cls, gotoId) {
+            return '<div class="card ' + cls + '"' + (gotoId ? ' data-goto="' + gotoId + '"' : "") +
+                '><div class="num">' + num + '</div><div class="lbl">' + label + "</div></div>";
         }
 
         const BAR_COLORS = ["#e91e63", "#9c27b0", "#3f51b5", "#2196f3", "#00bcd4",
@@ -819,6 +821,13 @@
             ["fltSpecKelas", "fltSpecTanggal", "fltSpecSearch"].forEach(id => {
                 document.getElementById(id).addEventListener(
                     id === "fltSpecSearch" ? "input" : "change", renderSpecial);
+            });
+
+            document.getElementById("statCards").addEventListener("click", (e) => {
+                const el = e.target.closest(".card[data-goto]");
+                if (!el) return;
+                const target = document.getElementById(el.dataset.goto);
+                if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
             });
 
             document.getElementById("kelasTable").addEventListener("click", (e) => {

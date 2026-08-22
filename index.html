@@ -25,6 +25,7 @@
         .header { display: flex; align-items: center; gap: 12px; }
         .header-icon { width: 40px; height: 40px; object-fit: contain; }
         .sub { color: #666; margin: 0 0 24px; font-size: 14px; }
+        #generatedAt { font-weight: bold; }
         .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
         .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px; }
         .card { background: #fff; border-radius: 10px; padding: 18px 20px; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
@@ -465,6 +466,15 @@
             return p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
         }
 
+        function fmtDDMmmYY(d) {
+            const p = n => ("0" + n).slice(-2);
+            return p(d.getDate()) + "-" + MONTHS[d.getMonth()] + "-" + String(d.getFullYear()).slice(-2);
+        }
+
+        function fmtDateTime(d) {
+            return fmtDDMmmYY(d) + ", " + fmtHHMMSS(d);
+        }
+
         function formatTanggal(s) {
             const t = String(s).trim();
             const m = t.match(/^(\d{1,2})[\s.-]+([A-Za-z]+|\d{1,2})(?:[\s.-]+\d{2,4})?/);
@@ -519,7 +529,7 @@
             if (!res.ok) throw new Error("Gagal mengambil data sheet (HTTP " + res.status + ")");
             try {
                 const hdr = res.headers.get("Date");
-                if (hdr) sheetTimeStr = fmtHHMMSS(new Date(hdr));
+                if (hdr) sheetTimeStr = fmtDateTime(new Date(hdr));
             } catch (e) { /* ignore header parse errors */ }
             const csv = await res.text();
             const rows = parseCSV(csv);
@@ -604,8 +614,8 @@
             ).join("");
 
             document.getElementById("generatedAt").textContent =
-                "Evoke - Reventra (01-10 Oct 2026). Diperbarui " +
-                (sheetTimeStr || fmtHHMMSS(new Date()));
+                "Evoke - Reventra (01-10 Oct 2026). Diperbarui : " +
+                (sheetTimeStr || fmtDateTime(new Date()));
         }
 
         function card(num, label, cls, gotoId) {

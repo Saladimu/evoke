@@ -507,10 +507,10 @@
             return jamMinutes(b["Jam (mulai)"]) - jamMinutes(a["Jam (mulai)"]);
         }
 
-        function byIdAsc(a, b) {
-            const na = parseInt(String(a["ID-No"]).replace(/\D/g, ""), 10);
-            const nb = parseInt(String(b["ID-No"]).replace(/\D/g, ""), 10);
-            return na - nb;
+        function byDateAsc(a, b) {
+            const diff = parseDate(a["Tanggal"]) - parseDate(b["Tanggal"]);
+            if (diff !== 0) return diff;
+            return jamMinutes(a["Jam (mulai)"]) - jamMinutes(b["Jam (mulai)"]);
         }
 
         async function loadReport() {
@@ -561,7 +561,7 @@
             KELAS.forEach(k => { totalCount[k] = 0; winners[k] = 0; allTotal[k] = 0; });
             records.forEach(r => {
                 if (r["Tanggal"] !== "" && KELAS.includes(r["Kelas"])) allTotal[r["Kelas"]]++;
-                if (r["Pemenang"] !== "" && KELAS.includes(r["Kelas"])) winners[r["Kelas"]]++;
+                if (r["Pemenang"] !== "" && r["Internal"].toUpperCase() === "TRUE" && KELAS.includes(r["Kelas"])) winners[r["Kelas"]]++;
             });
             KELAS.forEach(k => { totalCount[k] = allTotal[k]; });
 
@@ -662,7 +662,7 @@
         function showWinnersByName(name) {
             const list = allRecords.filter(r =>
                 r["Pemenang"] === name && r["Internal"].toUpperCase() === "TRUE"
-            ).sort(byIdAsc);
+            ).sort(byDateAsc);
 
             document.getElementById("modalHead").innerHTML =
                 "<tr><th>ID-No</th><th>Lomba</th><th>Tanggal</th></tr>";
@@ -680,8 +680,8 @@
 
         function showWinners(kelas) {
             const list = allRecords.filter(r =>
-                r["Pemenang"] !== "" && r["Kelas"] === kelas
-            ).sort(byIdAsc);
+                r["Pemenang"] !== "" && r["Internal"].toUpperCase() === "TRUE" && r["Kelas"] === kelas
+            ).sort(byDateAsc);
 
             document.getElementById("modalHead").innerHTML =
                 "<tr><th>ID-No</th><th>Lomba</th><th>Pemenang</th><th>Tanggal</th></tr>";
@@ -701,7 +701,7 @@
         function showTotal(kelas) {
             const list = allRecords.filter(r =>
                 r["Tanggal"] !== "" && r["Kelas"] === kelas
-            ).sort(byIdAsc);
+            ).sort(byDateAsc);
 
             document.getElementById("modalHead").innerHTML =
                 "<tr><th>ID-No</th><th>Deskripsi Lomba</th><th>Tanggal</th></tr>";

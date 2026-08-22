@@ -42,12 +42,20 @@ Note: No hint or instruction about this gesture is shown anywhere in the UI.
 
 The report page renders a summary dashboard plus three match tables, all computed client-side from the published Google Sheet CSV (fetched with `cache: "no-store"` so it always pulls the latest data; note that Google's published CSV endpoint can lag by a couple of minutes after an edit).
 
+The header line **Evoke - Reventra (01-10 Oct 2026). Diperbarui : `dd-Mmm-yy, HH:mm:ss`** is shown in bold and uses the **Google Sheet CSV time** — taken from the response `Date` header of the CSV fetch (e.g. `21-Aug-26, 04:10:15`), falling back to the current local time if that header is unavailable.
+
 ### Statistics Cards
 
 1. **Total Lomba Terjadwal** — rows with `Tanggal` filled and `Kelas` in SD/SMP/SMA/Gabungan.
 2. **Lomba terjadwal (Pending)** — rows where `Tanggal` is filled, `Pemenang` is empty, and both `Tim-1` and `Tim-2` are filled.
 3. **Total Lomba (Selesai)** — rows where `Tanggal` is filled, `Pemenang` is filled, and `Internal = TRUE`.
 4. **Special Note** — rows where `Tanggal` is filled and the `Note` column contains `Info:` (white card with a red border and red number).
+
+Clicking any card smooth-scrolls the page to its related table:
+
+- **Total Lomba Terjadwal** and **Total Lomba (Selesai)** → the **Total Lomba (Selesai)** table.
+- **Lomba terjadwal (Pending)** → the **Lomba terjadwal (Pending)** table.
+- **Special Note** → the **Special Note** table.
 
 ### Pemenang
 
@@ -59,10 +67,12 @@ The **Pemenang** table ranks winners by number of internal matches won, with eac
 
 ### Summary Lomba
 
-Per-kelas breakdown (SD, SMP, SMA, Gabungan) of internal-only matches (`Internal = TRUE`):
+Per-kelas breakdown (SD, SMP, SMA, Gabungan):
 
-- **Total Lomba** — internal rows with `Tanggal` filled. Clickable to list the matches.
-- **Pemenang** — internal rows with a declared winner. Clickable to list the winners.
+- **Total Lomba** — all scheduled rows (`Tanggal` filled) for that kelas, matching the **Total Lomba Terjadwal** card. Clickable to list the matches.
+- **Pemenang** — internal rows (`Internal = TRUE`) with a declared winner, matching the **Total Lomba (Selesai)** card. Clickable to list the winners.
+
+The match lists opened by clicking either column are sorted by **date ascending** (then start time).
 
 ### Tables
 

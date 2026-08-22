@@ -546,15 +546,12 @@
             const totalCount = {};
             const winners = {};
             const allTotal = {};
-            const totalDesc = {};
-            KELAS.forEach(k => { totalCount[k] = 0; winners[k] = 0; allTotal[k] = 0; totalDesc[k] = new Set(); });
+            KELAS.forEach(k => { totalCount[k] = 0; winners[k] = 0; allTotal[k] = 0; });
             records.forEach(r => {
-                const isInternal = r["Internal"].toUpperCase() === "TRUE";
                 if (r["Tanggal"] !== "" && KELAS.includes(r["Kelas"])) allTotal[r["Kelas"]]++;
-                if (r["Tanggal"] !== "" && isInternal && KELAS.includes(r["Kelas"])) totalDesc[r["Kelas"]].add(r["Deskripsi Lomba"]);
-                if (r["Pemenang"] !== "" && isInternal && KELAS.includes(r["Kelas"])) winners[r["Kelas"]]++;
+                if (r["Pemenang"] !== "" && KELAS.includes(r["Kelas"])) winners[r["Kelas"]]++;
             });
-            KELAS.forEach(k => { totalCount[k] = totalDesc[k].size; });
+            KELAS.forEach(k => { totalCount[k] = allTotal[k]; });
 
             const tanggals = [...new Set(internal.map(r => r["Tanggal"]).filter(Boolean))].sort((a, b) =>
                 parseDate(a) - parseDate(b)
@@ -671,7 +668,7 @@
 
         function showWinners(kelas) {
             const list = allRecords.filter(r =>
-                r["Pemenang"] !== "" && r["Internal"].toUpperCase() === "TRUE" && r["Kelas"] === kelas
+                r["Pemenang"] !== "" && r["Kelas"] === kelas
             ).sort(byIdAsc);
 
             document.getElementById("modalHead").innerHTML =
@@ -691,14 +688,14 @@
 
         function showTotal(kelas) {
             const list = allRecords.filter(r =>
-                r["Tanggal"] !== "" && r["Internal"].toUpperCase() === "TRUE" && r["Kelas"] === kelas
+                r["Tanggal"] !== "" && r["Kelas"] === kelas
             ).sort(byIdAsc);
 
             document.getElementById("modalHead").innerHTML =
                 "<tr><th>ID-No</th><th>Deskripsi Lomba</th><th>Tanggal</th></tr>";
 
             document.getElementById("winnerModalTitle").textContent =
-                "Daftar Lomba Internal - " + kelas + " (" + list.length + ")";
+                "Daftar Lomba Terjadwal - " + kelas + " (" + list.length + ")";
 
             document.getElementById("winnerList").innerHTML = list.map(r =>
                 "<tr><td>" + esc(r["ID-No"]) + "</td><td>" + esc(r["Deskripsi Lomba"]) + "</td><td>" +

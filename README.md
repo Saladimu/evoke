@@ -13,6 +13,7 @@ A lightweight live scores and event management site for **EVOKE 2 / Reventra (01
 | [`index.html`](index.html) | Live Score Report - Real-time competition report (statistics, filters, winner lists) fetched directly from a Google Sheet |
 | [`events.html`](events.html) | Kalender Lomba - Event match calendar, embedded from an AppSheet app |
 | [`feedback.html`](feedback.html) | Feedback - Feedback form, embedded via Tally |
+| [`game.html`](game.html) | Basket Lempar - A simple browser basketball shooting game to play while waiting |
 
 A shared top navigation bar links all three pages, with the active tab highlighted.
 
@@ -25,6 +26,15 @@ A sun/moon toggle button on the right side of the top menu bar switches between 
   - [`desktop-wall.png`](desktop-wall.png) on screens wider than 600px, [`mobile-wall.png`](mobile-wall.png) on phones.
   - The image is dimmed with a dark overlay (~28% effective opacity) to keep all info readable, and section headings/counts get a soft backdrop.
   - The three lower [tables](#tables) (**Total Lomba (Selesai)**, **Lomba terjadwal (Pending)**, **Special Note**) are semi-transparent so the wallpaper shows through them.
+
+## Basket Lempar ([`game.html`](game.html))
+
+A lightweight arcade basketball shooter to pass the time while waiting for results:
+
+- **How to play**: press, hold and drag on the canvas to aim (a dashed line shows the trajectory), then release to shoot. 10 throws per round; score a basket each time the ball drops through the moving hoop.
+- The ball uses simple gravity physics with backboard and rim bounces, a fade-out trail, and a short WebAudio "swish" sound on each basket (no audio files needed).
+- After 10 throws an overlay shows the final score with a **Main Lagi** button to restart.
+- The page reuses the same top nav, dark/light theme toggle, and hidden-menu system as the other pages.
 
 ## Hidden Menu Toggle
 
@@ -98,6 +108,7 @@ Dates are displayed in **`DD-Mmm`** format (e.g. `05-Oct`) in all three tables a
 ├── index.html            # Live Score Report (fetches Google Sheet CSV directly)
 ├── events.html           # Calendar page (AppSheet embed)
 ├── feedback.html         # Feedback page (Tally form embed)
+├── game.html             # Basket Lempar - browser basketball shooting game
 ├── favicon.png           # Site favicon
 ├── reventraicon.png      # Reventra logo shown in the report header
 ├── mobile-wall.png       # Dark-mode wallpaper used on phones

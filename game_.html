@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="EVOKE 2 - Reventra (01-10 Oct 2026) Game: lempar bola ke ring basket untuk mengisi waktu luang.">
+    <title>EVOKE 2 - Basket Lempar</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem("evoke-theme") === "dark") {
+                    document.documentElement.classList.add("dark");
+                }
+            } catch (e) {}
+        })();
+    </script>
+    <style>
+        body { margin: 0; font-family: sans-serif; background: #f4f6f8; color: #222; }
+        .nav-bar { background: #333; padding: 10px 20px; display: flex; gap: 20px; }
+        .nav-bar a { color: white; text-decoration: none; font-weight: bold; font-size: 18px; }
+        .nav-bar a:hover { color: #007bff; }
+        .nav-bar a.active { color: #007bff; }
+        .wrap { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
+        h1 { margin: 0 0 4px; font-size: 26px; }
+        .header { display: flex; align-items: center; gap: 12px; }
+        .header-icon { width: 40px; height: 40px; object-fit: contain; }
+        .sub { color: #666; margin: 0 0 20px; font-size: 14px; }
+        .hud { display: flex; gap: 24px; margin-bottom: 12px; }
+        .hud-item { font-size: 16px; font-weight: bold; background: #fff; border-radius: 8px;
+            padding: 8px 16px; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+        .hud-item b { color: #007bff; }
+        .game-wrap { position: relative; }
+        canvas {
+            width: 100%; display: block; border-radius: 12px; background: #ffd0a0;
+            box-shadow: 0 4px 16px rgba(0,0,0,.18); touch-action: none; cursor: crosshair;
+        }
+        .dark canvas { background: #263238; }
+        .hint { font-size: 13px; color: #666; margin-top: 10px; text-align: center; }
+        .overlay { position: absolute; inset: 0; background: rgba(0,0,0,.5); border-radius: 12px;
+            display: flex; align-items: center; justify-content: center; z-index: 5; }
+        .overlay[hidden] { display: none; }
+        .overlay-card { background: #fff; border-radius: 12px; padding: 28px 34px; text-align: center;
+            box-shadow: 0 8px 30px rgba(0,0,0,.3); }
+        .overlay-card h2 { margin: 0 0 8px; }
+        .overlay-card p { margin: 0 0 18px; color: #555; }
+        .overlay-card b { color: #007bff; font-size: 22px; }
+        .btn { border: none; background: #007bff; color: #fff; font-weight: bold; font-size: 16px;
+            padding: 12px 26px; border-radius: 8px; cursor: pointer; }
+        .btn:hover { background: #0056b3; }
+        .btn.small { font-size: 14px; padding: 8px 16px; }
+        .btn.ghost { background: transparent; color: #007bff; border: 1px solid #007bff; }
+        .btn.ghost:hover { background: rgba(0,123,255,.08); }
+        .toolbar { display: flex; gap: 10px; margin-top: 14px; justify-content: center; }
+        .info-box { display: none; margin-top: 12px; background: #fff; border: 1px solid #d0d7de;
+            border-radius: 10px; padding: 14px 18px; font-size: 14px; line-height: 1.6;
+            box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+        .info-box:not([hidden]) { display: block; }
+        .info-box h3 { margin: 0 0 6px; font-size: 15px; }
+        .theme-toggle {
+            background: none; border: none; cursor: pointer;
+            color: #fff; padding: 2px; display: flex; align-items: center; border-radius: 6px;
+        }
+        .nav-actions {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .theme-toggle:hover { background: rgba(255,255,255,.12); }
+        .theme-toggle svg { width: 20px; height: 20px; display: block; }
+        .theme-toggle .icon-sun { display: none; }
+        .dark .theme-toggle .icon-sun { display: block; }
+        .dark .theme-toggle .icon-moon { display: none; }
+        .theme-toggle.spin svg { animation: spin .6s linear; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .dark { color-scheme: dark; }
+        .dark body { background: #121417; color: #e8e8e8; }
+        .dark .nav-bar { background: #1b2024; }
+        .dark .hud-item { background: #1e2226; color: #e8e8e8; }
+        .dark .hud-item b { color: #4da3ff; }
+        .dark .overlay-card { background: #1e2226; color: #e8e8e8; }
+        .dark .overlay-card p { color: #9aa2ab; }
+        .dark .hint { color: #9aa2ab; }
+        .dark .btn { background: #2f6fbe; }
+        .dark .btn:hover { background: #4d86d4; }
+        .dark .btn.ghost { background: transparent; color: #4da3ff; border-color: #4da3ff; }
+        .dark .btn.ghost:hover { background: rgba(77,163,255,.12); }
+        .dark .info-box { background: #1e2226; border-color: #333a41; color: #e8e8e8; }
+        @media (max-width: 600px) {
+            .nav-bar { padding: 8px 10px; gap: 12px; }
+            .nav-bar a { font-size: 14px; }
+            h1 { font-size: 20px; }
+            .hud { gap: 12px; }
+            .hud-item { font-size: 14px; padding: 6px 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-bar" id="navBar">
+        <a href="index.html">Hasil Lomba</a>
+        <a href="events.html" data-secret>Kalender Lomba</a>
+        <a href="feedback.html" data-secret>Feedback</a>
+        <a href="game.html" class="active">Game</a>
+        <div class="nav-actions">
+            <button id="themeToggle" class="theme-toggle" aria-label="Ganti tema" aria-pressed="false">
+                <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            </button>
+            <button id="refreshBtn" class="theme-toggle" aria-label="Muat ulang halaman" title="Muat ulang halaman">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="wrap">
+        <div class="header">
+            <img src="reventraicon.png" alt="Reventra" class="header-icon">
+            <h1>Basket Lempar</h1>
+        </div>
+        <p class="sub">Isi waktu luang sambil menunggu hasil lomba EVOKE 2!</p>
+
+        <div class="hud">
+            <div class="hud-item">Skor: <b id="score">0</b></div>
+            <div class="hud-item">Lemparan: <b id="attempts">0</b>/10</div>
+        </div>
+
+        <div class="toolbar">
+            <button id="resetBtn" class="btn small ghost" title="Ulangi permainan dari awal">Ulang</button>
+            <button id="infoBtn" class="btn small ghost" title="Cara bermain">Cara Main</button>
+        </div>
+
+        <div class="info-box" id="infoBox" hidden>
+            <h3>Cara Main Basket Lempar</h3>
+            <ol>
+                <li>Tekan &amp; tahan di area permainan.</li>
+                <li>Geser untuk mengarahkan tembakan &mdash; garis putus-putus menunjukkan arah, semakin jauh geser semakin kuat lemparan.</li>
+                <li>Lepaskan untuk melempar bola ke ring.</li>
+                <li>Masukkan bola ke dalam ring untuk mencetak skor.</li>
+                <li>Kamu punya <b>10 lemparan</b> per ronde. Tekan <b>Ulang</b> kapan saja untuk memulai ulang.</li>
+            </ol>
+        </div>
+
+        <div class="game-wrap">
+            <canvas id="game" width="600" height="552"></canvas>
+            <div id="overlay" class="overlay" hidden>
+                <div class="overlay-card">
+                    <h2>Permainan Selesai!</h2>
+                    <p>Skor akhir: <b id="finalScore">0</b> dari 10 lemparan</p>
+                    <button id="restartBtn" class="btn">Dare to Begin</button>
+                </div>
+            </div>
+        </div>
+
+        <p class="hint">Tahan &amp; geser untuk mengarahkan tembakan, lalu lepaskan untuk melempar. Masukkan bola ke dalam ring!</p>
+    </div>
+
+    <script>
+        (function () {
+            var bar = document.getElementById("navBar");
+            if (!bar) return;
+            var secretLinks = bar.querySelectorAll("[data-secret]");
+            var KEY = "evoke-extra-menu";
+            var clicks = 0;
+            var timer = null;
+            function apply() {
+                var on = localStorage.getItem(KEY) === "1";
+                secretLinks.forEach(function (a) { a.style.display = on ? "" : "none"; });
+            }
+            bar.addEventListener("click", function () {
+                clicks++;
+                clearTimeout(timer);
+                timer = setTimeout(function () { clicks = 0; }, 3000);
+                if (clicks >= 5) {
+                    clicks = 0;
+                    localStorage.setItem(KEY, localStorage.getItem(KEY) === "1" ? "0" : "1");
+                    apply();
+                }
+            });
+            apply();
+        })();
+
+        (function () {
+            var btn = document.getElementById("themeToggle");
+            if (!btn) return;
+            var dark = document.documentElement.classList.contains("dark");
+            btn.setAttribute("aria-pressed", dark ? "true" : "false");
+            btn.addEventListener("click", function () {
+                dark = !dark;
+                document.documentElement.classList.toggle("dark", dark);
+                try { localStorage.setItem("evoke-theme", dark ? "dark" : "light"); } catch (e) {}
+                btn.setAttribute("aria-pressed", dark ? "true" : "false");
+            });
+        })();
+
+        (function () {
+            var btn = document.getElementById("refreshBtn");
+            if (!btn) return;
+            btn.addEventListener("click", function () {
+                btn.classList.add("spin");
+                setTimeout(function () { location.reload(); }, 300);
+            });
+        })();
+    </script>
+
+    <script>
+        (function () {
+            var canvas = document.getElementById("game");
+            var ctx = canvas.getContext("2d");
+            var scoreEl = document.getElementById("score");
+            var attemptsEl = document.getElementById("attempts");
+            var overlay = document.getElementById("overlay");
+            var finalScoreEl = document.getElementById("finalScore");
+            var restartBtn = document.getElementById("restartBtn");
+            var resetBtn = document.getElementById("resetBtn");
+            var infoBtn = document.getElementById("infoBtn");
+            var infoBox = document.getElementById("infoBox");
+
+            var MAX = 10;
+            var W = 0, H = 0, g = 0, rimY = 0, rimHalf = 0, bbW = 8, boardH = 0, floorY = 0;
+            var hoopBaseX = 0, hoopOsc = 0, ballR = 0;
+            var hoopOffset = 0, hoopTarget = 0, hoopSwitch = 1;
+            var ball, aim = { x: 0, y: 0 }, aiming = false, state = "aiming";
+            var score = 0, attempts = 0, last = 0, swish = 0, flight = 0;
+            var trail = [];
+
+            function resize() {
+                var rect = canvas.parentElement.getBoundingClientRect();
+                W = Math.max(280, Math.min(640, rect.width));
+                H = Math.round(W * 0.92);
+                canvas.width = W;
+                canvas.height = H;
+                g = H * 3.0;
+                rimY = H * 0.14;
+                rimHalf = Math.max(30, Math.min(55, W * 0.085));
+                boardH = H * 0.12;
+                floorY = H * 0.97;
+                hoopBaseX = W * 0.5;
+                hoopOsc = Math.max(6, W * 0.025);
+                ballR = Math.max(9, W * 0.02);
+                if (state !== "flying") resetBall();
+            }
+
+            function resetBall() {
+                ball = { x: W * 0.5, y: H * 0.78, vx: 0, vy: 0 };
+                trail = [];
+                if (attempts >= MAX) {
+                    state = "gameover";
+                    showOverlay();
+                } else {
+                    state = "aiming";
+                }
+            }
+
+            function updateHoop(dt) {
+                hoopSwitch -= dt;
+                if (hoopSwitch <= 0) {
+                    hoopSwitch = 0.8 + Math.random() * 1.4;
+                    hoopTarget = (Math.random() * 2 - 1) * hoopOsc * 1.6;
+                }
+                hoopOffset += (hoopTarget - hoopOffset) * Math.min(1, dt * 3);
+            }
+
+            function hoopX() { return hoopBaseX + hoopOffset; }
+
+            function updateHud() {
+                scoreEl.textContent = score;
+                attemptsEl.textContent = attempts;
+            }
+
+            function posFromEvent(e) {
+                var r = canvas.getBoundingClientRect();
+                return { x: e.clientX - r.left, y: e.clientY - r.top };
+            }
+
+            canvas.addEventListener("pointerdown", function (e) {
+                if (state !== "aiming") return;
+                e.preventDefault();
+                canvas.setPointerCapture(e.pointerId);
+                aiming = true;
+                var p = posFromEvent(e);
+                aim.x = p.x; aim.y = p.y;
+            });
+            canvas.addEventListener("pointermove", function (e) {
+                if (!aiming) return;
+                var p = posFromEvent(e);
+                aim.x = p.x; aim.y = p.y;
+            });
+            window.addEventListener("pointerup", function (e) {
+                if (!aiming) return;
+                aiming = false;
+                var dx = ball.x - aim.x, dy = ball.y - aim.y;
+                var dist = Math.hypot(dx, dy);
+                if (dist < 12) return;
+                var speed = Math.min(dist, 240) * (H * 2.3) / 240;
+                ball.vx = (dx / dist) * speed;
+                ball.vy = (dy / dist) * speed;
+                attempts++;
+                flight = 0;
+                updateHud();
+                state = "flying";
+                launchSound();
+            });
+
+            function bounceRim(px, py) {
+                var dx = ball.x - px, dy = ball.y - py;
+                var d = Math.hypot(dx, dy);
+                if (d < ballR && d > 0.001) {
+                    var nx = dx / d, ny = dy / d;
+                    var dot = ball.vx * nx + ball.vy * ny;
+                    if (dot < 0) {
+                        ball.vx -= (1 + 0.7) * dot * nx;
+                        ball.vy -= (1 + 0.7) * dot * ny;
+                        ball.x = px + nx * (ballR + 0.5);
+                        ball.y = py + ny * (ballR + 0.5);
+                    }
+                }
+            }
+
+            function update(dt) {
+                flight += dt;
+                ball.vy += g * dt;
+                var px = ball.x, py = ball.y;
+                ball.x += ball.vx * dt;
+                ball.y += ball.vy * dt;
+
+                var hx = hoopX();
+                var rimL = hx - rimHalf, rimR = hx + rimHalf;
+
+                if (py < rimY && ball.y >= rimY && ball.vy > 0 && ball.x >= rimL && ball.x <= rimR) {
+                    score++;
+                    swish = 1;
+                    updateHud();
+                    scoreSound();
+                }
+
+                var bbX = hx + rimHalf;
+                if (ball.vx > 0 && ball.x + ballR >= bbX && px + ballR < bbX &&
+                    ball.y >= rimY - boardH - ballR && ball.y <= rimY + ballR) {
+                    ball.x = bbX - ballR;
+                    ball.vx = -ball.vx * 0.6;
+                }
+
+                bounceRim(rimL, rimY);
+                bounceRim(rimR, rimY);
+
+                if (ball.y + ballR >= floorY) {
+                    ball.y = floorY - ballR;
+                    if (Math.abs(ball.vy) > 40) ball.vy = -ball.vy * 0.5; else ball.vy = 0;
+                    ball.vx *= 0.95;
+                }
+
+                trail.push({ x: ball.x, y: ball.y });
+                if (trail.length > 14) trail.shift();
+
+                if (flight > 5 ||
+                    ball.y - ballR > H + 80 || ball.x < -120 || ball.x > W + 120 ||
+                    (Math.abs(ball.vx) < 15 && Math.abs(ball.vy) < 15 && ball.y + ballR >= floorY - 2)) {
+                    resetBall();
+                }
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, W, H);
+                var hx = hoopX();
+                var rimL = hx - rimHalf, rimR = hx + rimHalf;
+                var bbX = hx + rimHalf;
+
+                ctx.fillStyle = "rgba(0,0,0,0.08)";
+                ctx.fillRect(0, floorY, W, H - floorY);
+
+                ctx.fillStyle = "#555";
+                ctx.fillRect(bbX - bbW / 2, rimY - boardH, bbW, boardH);
+                ctx.fillStyle = "#b71c1c";
+                ctx.fillRect(bbX - bbW / 2 - 2, rimY - boardH - 6, bbW + 4, 8);
+
+                ctx.strokeStyle = "#ff5722";
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(rimL, rimY);
+                ctx.lineTo(rimR, rimY);
+                ctx.stroke();
+
+                ctx.strokeStyle = "rgba(255,255,255,0.55)";
+                ctx.lineWidth = 1;
+                for (var n = 0; n < 6; n++) {
+                    var t = n / 6;
+                    ctx.beginPath();
+                    ctx.moveTo(rimL + t * rimHalf * 2, rimY);
+                    ctx.lineTo(hx + (t - 0.5) * 24, rimY + 26);
+                    ctx.stroke();
+                }
+
+                if (aiming && state === "aiming") {
+                    var dx = ball.x - aim.x, dy = ball.y - aim.y;
+                    var d = Math.hypot(dx, dy) || 1;
+                    var len = Math.min(d * 0.5, 100);
+                    ctx.setLineDash([6, 6]);
+                    ctx.strokeStyle = "rgba(0,123,255,0.85)";
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.moveTo(ball.x, ball.y);
+                    ctx.lineTo(ball.x + (dx / d) * len, ball.y + (dy / d) * len);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+
+                for (var i = 0; i < trail.length; i++) {
+                    var tp = trail[i];
+                    ctx.fillStyle = "rgba(255,152,0," + (i / trail.length) * 0.45 + ")";
+                    ctx.beginPath();
+                    ctx.arc(tp.x, tp.y, ballR * 0.75, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.fillStyle = "#e67e22";
+                ctx.strokeStyle = "#5d4037";
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, ballR, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.strokeStyle = "#5d4037";
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, ballR * 0.45, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(ball.x - ballR, ball.y);
+                ctx.lineTo(ball.x + ballR, ball.y);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(ball.x, ball.y - ballR);
+                ctx.lineTo(ball.x, ball.y + ballR);
+                ctx.stroke();
+
+                if (swish > 0) {
+                    swish -= 0.025;
+                    ctx.fillStyle = "rgba(0,200,83," + Math.max(0, Math.min(1, swish)) + ")";
+                    ctx.font = "bold 24px sans-serif";
+                    ctx.textAlign = "center";
+                    ctx.fillText("+1", hx, rimY - 34);
+                }
+            }
+
+            var actx = null;
+            function audio() {
+                if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+                return actx;
+            }
+            function beep(freq, dur, when, gain) {
+                var a = audio();
+                if (!a) return;
+                try {
+                    var o = a.createOscillator(), gr = a.createGain();
+                    o.type = "sine";
+                    o.frequency.value = freq;
+                    gr.gain.setValueAtTime(gain, a.currentTime + when);
+                    gr.gain.exponentialRampToValueAtTime(0.001, a.currentTime + when + dur);
+                    o.connect(gr);
+                    gr.connect(a.destination);
+                    o.start(a.currentTime + when);
+                    o.stop(a.currentTime + when + dur + 0.02);
+                } catch (e) {}
+            }
+            function scoreSound() { beep(880, 0.12, 0, 0.3); beep(1320, 0.18, 0.08, 0.3); }
+            function launchSound() { beep(220, 0.06, 0, 0.15); }
+
+            function showOverlay() {
+                finalScoreEl.textContent = score;
+                overlay.hidden = false;
+            }
+
+            function restart() {
+                score = 0;
+                attempts = 0;
+                swish = 0;
+                overlay.hidden = true;
+                updateHud();
+                resetBall();
+            }
+
+            restartBtn.addEventListener("click", restart);
+            resetBtn.addEventListener("click", restart);
+            infoBtn.addEventListener("click", function () {
+                infoBox.hidden = !infoBox.hidden;
+            });
+
+            function loop(now) {
+                if (!last) last = now;
+                var dt = Math.min(0.033, (now - last) / 1000);
+                last = now;
+                updateHoop(dt);
+                if (state === "flying") update(dt);
+                draw();
+                requestAnimationFrame(loop);
+            }
+
+            window.addEventListener("resize", resize);
+            resize();
+            updateHud();
+            requestAnimationFrame(loop);
+        })();
+    </script>
+</body>
+</html>

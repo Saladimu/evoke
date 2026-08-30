@@ -4,6 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>EVOKE Champion</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem("evoke-theme") === "dark") {
+                    document.documentElement.classList.add("dark");
+                }
+            } catch (e) {}
+        })();
+    </script>
 <style>
 :root{
   --bg:#f5f7fb;--card:#fff;--text:#172033;--muted:#697386;--line:#e5e9f2;

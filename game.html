@@ -21,11 +21,32 @@
 }
 *{box-sizing:border-box}
 body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(145deg,#eef2ff,#f8fafc 55%,#f3e8ff);color:var(--text);min-height:100vh}
+.nav-bar { background: #333; padding: 10px 20px; display: flex; gap: 20px; }
+.nav-bar a { color: white; text-decoration: none; font-weight: bold; font-size: 18px; }
+.nav-bar a:hover { color: #007bff; }
+.nav-bar a.active { color: #007bff; }
+.nav-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.theme-toggle {
+  background: none; border: none; cursor: pointer;
+  color: #fff; padding: 2px; display: flex; align-items: center; border-radius: 6px;
+}
+.theme-toggle:hover { background: rgba(255,255,255,.12); }
+.theme-toggle svg { width: 20px; height: 20px; display: block; }
+.theme-toggle .icon-sun { display: none; }
+.dark .theme-toggle .icon-sun { display: block; }
+.dark .theme-toggle .icon-moon { display: none; }
+.theme-toggle.spin svg { animation: spin .6s linear; }
+@keyframes spin { to { transform: rotate(360deg); } }
 .wrap{width:min(760px,calc(100% - 28px));margin:0 auto;padding:28px 0 42px}
-header{text-align:center;margin-bottom:18px}
-.logo{display:inline-flex;align-items:center;gap:9px;font-weight:900;letter-spacing:.08em;color:var(--accent);font-size:14px}
-h1{font-size:clamp(30px,7vw,52px);margin:8px 0 4px;line-height:1}
-.sub{color:var(--muted);margin:0}
+.header { display: flex; align-items: center; gap: 12px; }
+.header-icon { width: 40px; height: 40px; object-fit: contain; }
+h1{margin:0 0 4px;font-size:26px}
+.sub{color:var(--muted);margin:0 0 18px;font-size:14px}
 .card{background:rgba(255,255,255,.94);border:1px solid rgba(229,233,242,.95);border-radius:22px;padding:22px;box-shadow:0 14px 40px rgba(31,41,55,.08);margin-top:16px}
 .hidden{display:none!important}
 .progress{height:8px;background:#e9edf5;border-radius:99px;overflow:hidden;margin:4px 0 18px}
@@ -68,6 +89,18 @@ h3{margin:5px 0 8px}
 .you{font-weight:900;background:#eef2ff;border-radius:10px}
 .note{font-size:13px;color:var(--muted);text-align:center;margin-top:14px}
 input{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:13px;font-size:16px}
+.name-field{margin-top:16px;text-align:left}
+.name-field label{display:block;font-size:13px;font-weight:800;margin-bottom:6px}
+.api-msg{font-size:13px;margin-top:8px;color:var(--danger)}
+.api-msg:empty{display:none}
+.api-msg.ok{color:var(--good)}
+@media(max-width:600px){
+ .nav-bar { padding: 8px 10px; gap: 12px; }
+ .nav-bar a { font-size: 14px; }
+ .header { gap: 8px; }
+ .header-icon { width: 32px; height: 32px; }
+ h1 { font-size: 20px; }
+}
 @media(max-width:520px){
  .wrap{width:min(100% - 18px,760px);padding-top:18px}
  .card{padding:17px;border-radius:18px}
@@ -75,15 +108,50 @@ input{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:13
  .memory-grid{gap:7px}
  .target-area{height:270px}
 }
+.dark { color-scheme: dark; }
+.dark body { background: #121417; color: #e8e8e8; }
+.dark .nav-bar { background: #1b2024; }
+.dark .sub { color: #9aa2ab; }
+.dark .card { background: #1e2226; border-color: #333a42; box-shadow: 0 14px 40px rgba(0,0,0,.35); }
+.dark .muted, .dark .note { color: #9aa2ab; }
+.dark .badge { background: #232b36; color: #8ab4ff; }
+.dark .btn.secondary { background: #232b36; color: #8ab4ff; }
+.dark .btn.ghost { background: #1b2024; color: #e8e8e8; border-color: #333a42; }
+.dark .btn.danger { background: #3a2020; color: #ff8a80; }
+.dark .rules { background: #1b2024; border-color: #333a42; }
+.dark .tile { background: #2a3036; }
+.dark .tile.show { background: #232b36; }
+.dark .choice { background: #1e2226; color: #e8e8e8; border-color: #333a42; }
+.dark .target-area { background: #1b2024; border-color: #333a42; }
+.dark .rank-list li { border-color: #333a42; }
+.dark .you { background: #232b36; }
+.dark input { background: #1e2226; color: #e8e8e8; border-color: #333a42; }
+.dark .progress { background: #2a3036; }
 </style>
 </head>
 <body>
+    <div class="nav-bar" id="navBar">
+        <a href="index.html">Hasil Lomba</a>
+        <a href="events.html" data-secret>Kalender Lomba</a>
+        <a href="feedback.html" data-secret>Feedback</a>
+        <a href="game.html" class="active">Game</a>
+        <div class="nav-actions">
+            <button id="themeToggle" class="theme-toggle" aria-label="Ganti tema" aria-pressed="false">
+                <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            </button>
+            <button id="refreshBtn" class="theme-toggle" aria-label="Muat ulang halaman" title="Muat ulang halaman">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+            </button>
+        </div>
+    </div>
+
 <div class="wrap">
-<header>
-  <div class="logo">◆ EVOKE</div>
-  <h1>Champion</h1>
-  <p class="sub">Tantang fokus, kecepatan, dan ketepatanmu.</p>
-</header>
+        <div class="header">
+            <img src="reventraicon.png" alt="Reventra" class="header-icon">
+            <h1>Champion</h1>
+        </div>
+        <p class="sub">Tantang fokus, kecepatan, dan ketepatanmu.</p>
 
 <section id="home" class="card center">
   <div class="start-icon">🏆</div>
@@ -96,11 +164,16 @@ input{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:13
       <li>🎯 <b>Accuracy</b> — klik target secepat dan setepat mungkin.</li>
     </ul>
   </div>
+  <div class="name-field">
+    <label for="playerName">Nama pemain</label>
+    <input id="playerName" maxlength="24" placeholder="Tulis namamu" autocomplete="nickname">
+  </div>
+  <p class="api-msg" id="homeMsg"></p>
   <div class="actions">
     <button class="btn" id="startBtn">Mulai Challenge</button>
     <button class="btn secondary" id="leaderBtn">Lihat Leaderboard</button>
   </div>
-  <p class="note">Personal Best tersimpan di perangkat ini.</p>
+  <p class="note">Skor masuk ke leaderboard bersama, bukan di perangkat ini.</p>
 </section>
 
 <section id="game" class="card hidden">
@@ -141,12 +214,12 @@ input{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:13
 <section id="leaderboard" class="card hidden">
   <div class="center">
     <h2>🏆 Leaderboard</h2>
-    <p class="muted">Top score yang tersimpan di perangkat ini.</p>
+    <p class="muted">Top skor dari semua pemain.</p>
   </div>
   <ol id="rankList" class="rank-list"></ol>
+  <p class="api-msg" id="boardMsg"></p>
   <div class="actions">
     <button class="btn ghost" id="backBtn">Kembali</button>
-    <button class="btn danger" id="clearBtn">Reset Score</button>
   </div>
 </section>
 
@@ -166,7 +239,9 @@ input{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:13
 <script>
 (() => {
   const $ = id => document.getElementById(id);
-  const state = { score:0, round:1, memory:{first:null,matched:0,lock:false}, speed:{q:0,correct:0,end:0,timer:null}, accuracy:{hits:0,end:0,timer:null} };
+  const SCORES_API = '/API/scores';
+  const NAME_KEY = 'evokePlayerName';
+  const state = { score:0, round:1, name:'', memory:{first:null,matched:0,lock:false}, speed:{q:0,correct:0,end:0,timer:null}, accuracy:{hits:0,end:0,timer:null} };
   const emojis = ['🎵','🎵','🎤','🎤','🎹','🎹','🎸','🎸','🎧','🎧','⭐','⭐','🏆','🏆','🔥','🔥'];
   const questions = [
     // Pengetahuan Umum
@@ -312,27 +387,61 @@ input{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:13
     t.addEventListener('click',()=>{state.accuracy.hits++;addScore(75);moveTarget()});area.appendChild(t);
   }
 
-  function finish(){
+  function playerName(){
+    return ($('playerName').value||'').replace(/\s+/g,' ').trim().slice(0,24);
+  }
+  function setMsg(id,text,ok){
+    const el=$(id); if(!el) return;
+    el.textContent=text||'';
+    el.classList.toggle('ok',!!ok);
+  }
+  async function finish(){
     clearTimers(); $('bar').style.width='100%';
-    const previous=Number(localStorage.getItem('evokeBest')||0); const isBest=state.score>previous;
-    if(isBest)localStorage.setItem('evokeBest',String(state.score));
     $('finalScore').textContent=state.score.toLocaleString('id-ID');
-    $('bestText').textContent=isBest?'🎉 Personal Best baru!':'Personal Best: '+Math.max(previous,state.score).toLocaleString('id-ID');
-    saveScore(state.score);show('result');
+    $('bestText').textContent='Mengirim skor ke leaderboard...';
+    show('result');
+    try{
+      const res=await fetch(SCORES_API,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({name:state.name,score:Math.round(state.score)})
+      });
+      const data=await res.json().catch(()=>({}));
+      if(!res.ok) throw new Error(data.error||'Gagal menyimpan skor');
+      const rank=data.rank?`Peringkat #${data.rank}`:'Tersimpan';
+      const best=data.best!=null?data.best:state.score;
+      $('bestText').textContent=`${rank} · Best: ${Number(best).toLocaleString('id-ID')}`;
+    }catch(err){
+      $('bestText').textContent='Skor belum masuk leaderboard: '+(err.message||'jaringan error');
+    }
   }
 
-  function getScores(){try{return JSON.parse(localStorage.getItem('evokeScores')||'[]')}catch{return[]}}
-  function saveScore(score){
-    const scores=getScores();scores.push({score,date:new Date().toISOString()});scores.sort((a,b)=>b.score-a.score);
-    localStorage.setItem('evokeScores',JSON.stringify(scores.slice(0,10)));
+  async function fetchScores(){
+    const res=await fetch(SCORES_API,{cache:'no-store'});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data.error||'Gagal memuat leaderboard');
+    return Array.isArray(data.scores)?data.scores:[];
   }
-  function renderLeaderboard(){
-    const list=$('rankList'),scores=getScores(),best=Number(localStorage.getItem('evokeBest')||0);list.innerHTML='';
-    if(!scores.length){list.innerHTML='<li><span>Belum ada skor</span><b>—</b></li>';return}
-    scores.forEach((s,i)=>{
-      const li=document.createElement('li');if(s.score===best)li.classList.add('you');
-      li.innerHTML=`<span>${i+1}. ${s.score===best?'YOU':'Champion '+(i+1)}</span><b>${s.score.toLocaleString('id-ID')}</b>`;list.appendChild(li);
-    });
+  async function renderLeaderboard(){
+    const list=$('rankList'); list.innerHTML='';
+    setMsg('boardMsg','Memuat leaderboard...');
+    try{
+      const scores=await fetchScores();
+      setMsg('boardMsg','');
+      if(!scores.length){list.innerHTML='<li><span>Belum ada skor</span><b>—</b></li>';return}
+      const me=playerName().toLowerCase();
+      scores.forEach((s,i)=>{
+        const li=document.createElement('li');
+        const mine=me && String(s.name||'').toLowerCase()===me;
+        if(mine) li.classList.add('you');
+        const label=mine?'YOU':(s.name||'Champion');
+        li.innerHTML=`<span>${i+1}. ${label}</span><b>${Number(s.score).toLocaleString('id-ID')}</b>`;
+        list.appendChild(li);
+      });
+    }catch(err){
+      setMsg('boardMsg',err.message||'Gagal memuat leaderboard');
+      list.innerHTML='<li><span>Leaderboard belum tersedia</span><b>—</b></li>';
+    }
   }
   function clearTimers(){
     if(state.speed.timer)clearInterval(state.speed.timer);
@@ -340,13 +449,76 @@ input{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:13
     state.speed.timer=null;state.accuracy.timer=null;
   }
 
-  $('startBtn').addEventListener('click',start);
-  $('againBtn').addEventListener('click',start);
+  function requireName(){
+    const name=playerName();
+    if(!name){
+      setMsg('homeMsg','Isi nama pemain dulu.');
+      $('playerName').focus();
+      return '';
+    }
+    setMsg('homeMsg','');
+    state.name=name;
+    try{localStorage.setItem(NAME_KEY,name)}catch(e){}
+    return name;
+  }
+  try{
+    const saved=localStorage.getItem(NAME_KEY)||'';
+    if(saved) $('playerName').value=saved;
+  }catch(e){}
+
+  $('startBtn').addEventListener('click',()=>{if(!requireName())return;start()});
+  $('againBtn').addEventListener('click',()=>{if(!requireName())return;start()});
   $('leaderBtn').addEventListener('click',()=>{renderLeaderboard();show('leaderboard')});
   $('resultLeaderBtn').addEventListener('click',()=>{renderLeaderboard();show('leaderboard')});
   $('backBtn').addEventListener('click',()=>show('home'));
-  $('clearBtn').addEventListener('click',()=>{if(confirm('Hapus semua skor di perangkat ini?')){localStorage.removeItem('evokeScores');localStorage.removeItem('evokeBest');renderLeaderboard()}});
 })();
 </script>
+    <script>
+        (function () {
+            var bar = document.getElementById("navBar");
+            if (!bar) return;
+            var secretLinks = bar.querySelectorAll("[data-secret]");
+            var KEY = "evoke-extra-menu";
+            var clicks = 0;
+            var timer = null;
+            function apply() {
+                var on = localStorage.getItem(KEY) === "1";
+                secretLinks.forEach(function (a) { a.style.display = on ? "" : "none"; });
+            }
+            bar.addEventListener("click", function () {
+                clicks++;
+                clearTimeout(timer);
+                timer = setTimeout(function () { clicks = 0; }, 3000);
+                if (clicks >= 5) {
+                    clicks = 0;
+                    localStorage.setItem(KEY, localStorage.getItem(KEY) === "1" ? "0" : "1");
+                    apply();
+                }
+            });
+            apply();
+        })();
+
+        (function () {
+            var btn = document.getElementById("themeToggle");
+            if (!btn) return;
+            var dark = document.documentElement.classList.contains("dark");
+            btn.setAttribute("aria-pressed", dark ? "true" : "false");
+            btn.addEventListener("click", function () {
+                dark = !dark;
+                document.documentElement.classList.toggle("dark", dark);
+                try { localStorage.setItem("evoke-theme", dark ? "dark" : "light"); } catch (e) {}
+                btn.setAttribute("aria-pressed", dark ? "true" : "false");
+            });
+        })();
+
+        (function () {
+            var btn = document.getElementById("refreshBtn");
+            if (!btn) return;
+            btn.addEventListener("click", function () {
+                btn.classList.add("spin");
+                setTimeout(function () { location.reload(); }, 300);
+            });
+        })();
+    </script>
 </body>
 </html>

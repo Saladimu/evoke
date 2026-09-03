@@ -1,6 +1,6 @@
 # EVOKE 2 - Live Scores
 
-A lightweight live scores and event management site for **EVOKE 2 / Reventra (01-10 Oct 2026)**, built with plain HTML and deployed on [Cloudflare Pages](https://pages.dev). It provides real-time competition results, an event calendar, and a feedback form without needing a custom backend.
+A lightweight live scores and event management site for **EVOKE 2 / Reventra (01-10 Oct 2026)**, built with plain HTML and deployed on [Cloudflare Pages](https://pages.dev). It provides real-time competition results, an event calendar, a feedback form, and an **EVOKE Champion** mini-game with a shared leaderboard.
 
 ## Live URL
 
@@ -13,9 +13,9 @@ A lightweight live scores and event management site for **EVOKE 2 / Reventra (01
 | [`index.html`](index.html) | Live Score Report - Real-time competition report (statistics, filters, winner lists) fetched directly from a Google Sheet |
 | [`events.html`](events.html) | Kalender Lomba - Event match calendar, embedded from an AppSheet app |
 | [`feedback.html`](feedback.html) | Feedback - Feedback form, embedded via Tally |
-| [`game.html`](game.html) | Basket Lempar - A simple browser basketball shooting game to play while waiting |
+| [`game.html`](game.html) | EVOKE Champion - 3-round mini-game (Memory, Speed, Accuracy) with a shared leaderboard |
 
-A shared top navigation bar links all three pages, with the active tab highlighted.
+A shared top navigation bar links all pages, with the active tab highlighted. Every page uses the same header: Reventra icon, page title, theme toggle, and refresh.
 
 ## Dark / Light Theme
 
@@ -27,14 +27,23 @@ A sun/moon toggle button on the right side of the top menu bar switches between 
   - The image is dimmed with a dark overlay (~28% effective opacity) to keep all info readable, and section headings/counts get a soft backdrop.
   - The three lower [tables](#tables) (**Total Lomba (Selesai)**, **Lomba terjadwal (Pending)**, **Special Note**) are semi-transparent so the wallpaper shows through them.
 
-## Basket Lempar ([`game.html`](game.html))
+## EVOKE Champion ([`game.html`](game.html))
 
-A lightweight arcade basketball shooter to pass the time while waiting for results:
+A 3-round challenge to pass the time while waiting for results:
 
-- **How to play**: press, hold and drag on the canvas to aim (a dashed line shows the trajectory), then release to shoot. 10 throws per round; score a basket each time the ball drops through the moving hoop.
-- The ball uses simple gravity physics with backboard and rim bounces, a fade-out trail, and a short WebAudio "swish" sound on each basket (no audio files needed).
-- After 10 throws an overlay shows the final score with a **Main Lagi** button to restart.
-- The page reuses the same top nav, dark/light theme toggle, and hidden-menu system as the other pages.
+1. **Memory** — match all emoji pairs.
+2. **Speed** — answer trivia as quickly as possible in 15 seconds.
+3. **Accuracy** — click moving targets for 15 seconds.
+
+Players must enter a name before starting. After the last round, the score is posted to the central leaderboard (not stored only on the device). The name is remembered in `localStorage` (key `evokePlayerName`) so it does not need to be retyped.
+
+### Shared leaderboard
+
+- Scores are saved and loaded through the Cloudflare Pages Function at `/API/scores` (`functions/API/scores.js`).
+- **GET** `/API/scores` returns the top 20 scores (best score per player name).
+- **POST** `/API/scores` with `{ "name": "...", "score": 1234 }` appends a result and returns rank plus the player's best.
+- Names are trimmed to 24 characters. Each name keeps only its highest score on the board.
+- If a Cloudflare KV namespace named `SCORES` is bound to the Pages project, scores persist across deploys. Without KV, scores are kept in worker memory (lost on restart).
 
 ## Hidden Menu Toggle
 
@@ -99,6 +108,7 @@ Dates are displayed in **`DD-Mmm`** format (e.g. `05-Oct`) in all three tables a
   - The report in [`index.html`](index.html) fetches and parses the published Google Sheet CSV directly in the browser (the published CSV endpoint sends `Access-Control-Allow-Origin: *`, so no proxy is required).
   - The calendar in [`events.html`](events.html) is powered by an AppSheet app.
   - Feedback in [`feedback.html`](feedback.html) is collected through a Tally form.
+- **Champion scores**: [`game.html`](game.html) reads and writes the shared leaderboard through `/API/scores`.
 - **Automatic deploys**: Every push to the `main` branch on GitHub triggers a Cloudflare Pages deployment, so the live site updates automatically (typically within 30 seconds).
 
 ## Project Structure
@@ -108,19 +118,20 @@ Dates are displayed in **`DD-Mmm`** format (e.g. `05-Oct`) in all three tables a
 ├── index.html            # Live Score Report (fetches Google Sheet CSV directly)
 ├── events.html           # Calendar page (AppSheet embed)
 ├── feedback.html         # Feedback page (Tally form embed)
-├── game.html             # Basket Lempar - browser basketball shooting game
+├── game.html             # EVOKE Champion mini-game + shared leaderboard
 ├── favicon.png           # Site favicon
-├── reventraicon.png      # Reventra logo shown in the report header
+├── reventraicon.png      # Reventra logo shown in the page header
 ├── mobile-wall.png       # Dark-mode wallpaper used on phones
 ├── desktop-wall.png      # Dark-mode wallpaper used on wider screens
 └── functions/
     └── API/
-        └── data.js       # Optional Cloudflare Pages Function (currently unused by the report)
+        ├── data.js       # Optional Cloudflare Pages Function (currently unused by the report)
+        └── scores.js     # Shared Champion leaderboard (GET/POST /API/scores)
 ```
 
 ## Local Development
 
-No build step or package manager is required! Just serve the folder locally:
+Static pages need no build step. Serve the folder locally:
 
 ```bash
 python3 -m http.server 8000
@@ -128,13 +139,20 @@ python3 -m http.server 8000
 
 Then open <http://localhost:8000> in your browser.
 
+The Champion leaderboard at `/API/scores` only runs under Cloudflare Pages Functions. For a local API, use Wrangler:
+
+```bash
+npx wrangler pages dev .
+```
+
 ## Deployment
 
 The project is configured for continuous deployment with Cloudflare Pages:
 
 1. Connect your GitHub repository (`Saladimu/evoke`) to Cloudflare Pages.
 2. Set the build command and output directory to **none** and `/` (or `.`) respectively, since this is a static site.
-3. Commit and push to `main`; Cloudflare will build and deploy automatically.
+3. Create a KV namespace and bind it to the Pages project as `SCORES` so leaderboard scores persist.
+4. Commit and push to `main`; Cloudflare will build and deploy automatically.
 
 ## License
 

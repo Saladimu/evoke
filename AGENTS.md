@@ -54,8 +54,8 @@ Data must keep appearing on the web when the sheet changes.
 - Do not hardcode a new sheet URL unless the user provides it. The current URL is in `index.html` and `functions/API/data.js`; keep them the same.
 - Poll about every 20 seconds while the tab is visible. Skip polls when `document.hidden`. Fetch again on `visibilitychange` when the tab becomes visible.
 - On silent refresh: preserve filter values, skip re-render if the fingerprint is unchanged, flash changed rows, show the toast.
-- Refresh button on this page must call `loadReport({ silent: true })`, not `location.reload()`.
-- Guard concurrent loads with `loadInFlight`.
+- Refresh button on this page must call `loadReport({ silent: true, force: true })`, never `location.reload()`. A force refresh always re-fetches from the source, re-renders even when unchanged, and toasts "Data diperbarui (n)" or "Data sudah terbaru".
+- Guard concurrent loads with a shared `loadPromise`. Non-forced callers reuse the in-flight promise; a forced call waits for it, then fetches again.
 - Treat `Internal` as true only when `String(value).toUpperCase() === "TRUE"`.
 - Stats card rules:
   - Total Lomba Terjadwal: `Tanggal` filled and `Kelas` in SD / SMP / SMA / Gabungan

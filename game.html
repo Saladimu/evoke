@@ -481,6 +481,11 @@ input{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:13
   $('leaderBtn').addEventListener('click',()=>{renderLeaderboard();show('leaderboard')});
   $('resultLeaderBtn').addEventListener('click',()=>{renderLeaderboard();show('leaderboard')});
   $('backBtn').addEventListener('click',()=>show('home'));
+  window.evokeRefreshLeaderboard=function(){
+    const board=$('leaderboard');
+    if(board && !board.classList.contains('hidden')) return renderLeaderboard();
+    return false;
+  };
   setInterval(()=>{
     if(document.hidden) return;
     const board=$('leaderboard');
@@ -536,7 +541,15 @@ input{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:13
             if (!btn) return;
             btn.addEventListener("click", function () {
                 btn.classList.add("spin");
-                setTimeout(function () { location.reload(); }, 300);
+                var done = function () { setTimeout(function () { btn.classList.remove("spin"); }, 400); };
+                var p = typeof window.evokeRefreshLeaderboard === "function" ? window.evokeRefreshLeaderboard() : false;
+                if (p && typeof p.then === "function") {
+                    p.then(done).catch(done);
+                } else if (p) {
+                    done();
+                } else {
+                    setTimeout(function () { location.reload(); }, 300);
+                }
             });
         })();
     </script>

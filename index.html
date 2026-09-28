@@ -459,7 +459,7 @@
         let sheetTimeStr = "";
         let lastFingerprint = "";
         let pollTimer = null;
-        let loadInFlight = false;
+        let loadPromise = null;
 
         function parseCSV(text) {
             const rows = [];
@@ -684,20 +684,29 @@
         }
 
         async function loadReport(opts) {
-            if (loadInFlight) return;
-            loadInFlight = true;
-            const silent = opts && opts.silent;
-            const saved = silent ? saveFilters() : null;
+            const o = opts || {};
+            if (loadPromise) {
+                if (!o.force) return loadPromise.then(function () { return { status: "busy" }; });
+                try { await loadPromise; } catch (e) { /* wait out previous load */ }
+            }
+            loadPromise = doLoadReport(o).finally(function () { loadPromise = null; });
+            return loadPromise;
+        }
+
+        async function doLoadReport(o) {
+            const silent = !!o.silent;
+            const force = !!o.force;
+            const saved = (silent || force) ? saveFilters() : null;
             const prevRecords = allRecords.slice();
             try {
             const fetched = await fetchCsvText();
             const records = fetched.records;
             const fp = fingerprint(records);
-            if (silent && fp === lastFingerprint) {
-                loadInFlight = false;
-                return;
+            const unchanged = lastFingerprint !== "" && fp === lastFingerprint;
+            if (silent && !force && unchanged) {
+                return { status: "unchanged", changed: 0 };
             }
-            const changed = silent ? collectChangedIds(prevRecords, records) : [];
+            const changed = collectChangedIds(prevRecords, records);
             lastFingerprint = fp;
             allRecords = records;
 
@@ -760,10 +769,28 @@
                     el.classList.add("num-flash");
                 });
             }
+            if (force) {
+                if (changed.length) {
+                    flashRows(changed);
+                    document.querySelectorAll(".card").forEach(el => {
+                        el.classList.remove("num-flash");
+                        void el.offsetWidth;
+                        el.classList.add("num-flash");
+                    });
+                    showToast("Data diperbarui (" + changed.length + ")");
+                } else {
+                    showToast("Data sudah terbaru");
+                }
+            }
             const errBox = document.getElementById("errorBox");
             if (errBox) { errBox.hidden = true; errBox.textContent = ""; }
-            } finally {
-                loadInFlight = false;
+            return { status: changed.length ? "changed" : "unchanged", changed: changed.length };
+            } catch (err) {
+                if (force) {
+                    const box = document.getElementById("errorBox");
+                    if (box) { box.hidden = false; box.textContent = "Gagal memuat laporan: " + err.message; }
+                }
+                throw err;
             }
         }
 
@@ -1103,7 +1130,9 @@
                 btn.classList.add("spin");
                 var done = function () { setTimeout(function () { btn.classList.remove("spin"); }, 400); };
                 if (typeof loadReport === "function") {
-                    loadReport({ silent: true }).then(done).catch(function () { location.reload(); });
+                    loadReport({ silent: true, force: true })
+                        .then(done)
+                        .catch(function () { done(); });
                 } else {
                     setTimeout(function () { location.reload(); }, 300);
                 }

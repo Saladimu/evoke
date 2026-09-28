@@ -198,6 +198,45 @@
         .dark .home-ic { color: #4da3ff; }
         .dark .view-hint { color: #4da3ff; }
         .dark .modal-close { color: #bbb; }
+        .live-dot {
+            display: inline-block; width: 8px; height: 8px; background: #2e7d32;
+            border-radius: 50%; margin: 0 4px 0 8px; vertical-align: middle;
+            box-shadow: 0 0 0 0 rgba(46,125,50,.55);
+            animation: live-pulse 1.6s ease-out infinite;
+        }
+        @keyframes live-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(46,125,50,.55); }
+            70% { box-shadow: 0 0 0 6px rgba(46,125,50,0); }
+            100% { box-shadow: 0 0 0 0 rgba(46,125,50,0); }
+        }
+        .live-label { font-size: 12px; color: #2e7d32; font-weight: 700; letter-spacing: .3px; }
+        .dark .live-dot { background: #81c784; }
+        .dark .live-label { color: #81c784; }
+        tr.row-flash td { animation: row-flash 2.4s ease; }
+        @keyframes row-flash {
+            0% { background: #fff59d; }
+            100% { background: transparent; }
+        }
+        .dark tr.row-flash td { animation: row-flash-dark 2.4s ease; }
+        @keyframes row-flash-dark {
+            0% { background: #3a4a22; }
+            100% { background: transparent; }
+        }
+        .card.num-flash .num { animation: num-pop .6s ease; }
+        @keyframes num-pop {
+            0% { transform: scale(1.18); }
+            100% { transform: scale(1); }
+        }
+        .live-toast {
+            position: fixed; bottom: 20px; right: 20px; z-index: 80;
+            background: #2e7d32; color: #fff; padding: 10px 16px;
+            border-radius: 8px; font-size: 13px; font-weight: 600;
+            box-shadow: 0 4px 16px rgba(0,0,0,.2);
+            opacity: 0; transform: translateY(8px); pointer-events: none;
+            transition: opacity .25s ease, transform .25s ease;
+        }
+        .live-toast.show { opacity: 1; transform: translateY(0); }
+        .dark .live-toast { background: #2e7d32; }
         .dark .modal-close:hover { color: #fff; }
         .dark .badge-win { background: #233329; color: #81c784; }
         .dark .rank { color: #9aa2ab; }
@@ -390,6 +429,7 @@
         </div>
         </div>
     </div>
+    <div id="liveToast" class="live-toast" role="status" aria-live="polite"></div>
 
     <div id="winnerModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="winnerModalTitle" hidden>
         <div class="modal-content">
@@ -408,13 +448,18 @@
 
     <script>
         const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSEIhSXJGhIrmUPcj2vWWnZHagsQnkm9-BBBr1tdmmWiCKB0OvYqkBCiRIpHO_f_tpJfTW8YjCtu4vt/pub?gid=470675989&single=true&output=csv";
+        const DATA_API = "/API/data";
         const KELAS = ["SD", "SMP", "SMA", "Gabungan"];
+        const POLL_MS = 20000;
         let internalRecords = [];
         let pendingRecords = [];
         let specialRecords = [];
         let allRecords = [];
         let winnerSummary = [];
         let sheetTimeStr = "";
+        let lastFingerprint = "";
+        let pollTimer = null;
+        let loadInFlight = false;
 
         function parseCSV(text) {
             const rows = [];
@@ -514,19 +559,118 @@
             return jamMinutes(a["Jam (mulai)"]) - jamMinutes(b["Jam (mulai)"]);
         }
 
-        async function loadReport() {
+        function fingerprint(records) {
+            return records.map(r =>
+                [r["ID-No"], r["Pemenang"], r["Tim-1"], r["Tim-2"], r["Note"], r["Tanggal"], r["Jam (mulai)"]].join("|")
+            ).join("\n");
+        }
+
+        function recordKey(r) {
+            return String(r["ID-No"] || "") + "|" + String(r["Deskripsi Lomba"] || "");
+        }
+
+        function collectChangedIds(prev, next) {
+            const prevMap = {};
+            prev.forEach(r => { prevMap[recordKey(r)] = fingerprint([r]); });
+            const ids = [];
+            next.forEach(r => {
+                const k = recordKey(r);
+                const fp = fingerprint([r]);
+                if (prevMap[k] !== fp) ids.push(String(r["ID-No"] || ""));
+            });
+            return ids;
+        }
+
+        function flashRows(ids) {
+            if (!ids.length) return;
+            const set = {};
+            ids.forEach(id => { if (id) set[id] = true; });
+            ["internalList", "pendingList", "specialList"].forEach(listId => {
+                document.querySelectorAll("#" + listId + " tr").forEach(tr => {
+                    const cell = tr.querySelector("td");
+                    if (cell && set[cell.textContent]) {
+                        tr.classList.remove("row-flash");
+                        void tr.offsetWidth;
+                        tr.classList.add("row-flash");
+                    }
+                });
+            });
+        }
+
+        function showToast(msg) {
+            const el = document.getElementById("liveToast");
+            if (!el) return;
+            el.textContent = msg;
+            el.classList.add("show");
+            clearTimeout(showToast._t);
+            showToast._t = setTimeout(() => el.classList.remove("show"), 2800);
+        }
+
+        function saveFilters() {
+            return {
+                fltKelas: document.getElementById("fltKelas").value,
+                fltTanggal: document.getElementById("fltTanggal").value,
+                fltSearch: document.getElementById("fltSearch").value,
+                fltPendKelas: document.getElementById("fltPendKelas").value,
+                fltPendTanggal: document.getElementById("fltPendTanggal").value,
+                fltPendSearch: document.getElementById("fltPendSearch").value,
+                fltSpecKelas: document.getElementById("fltSpecKelas").value,
+                fltSpecTanggal: document.getElementById("fltSpecTanggal").value,
+                fltSpecSearch: document.getElementById("fltSpecSearch").value
+            };
+        }
+
+        function restoreFilters(saved) {
+            Object.keys(saved).forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (el.tagName === "SELECT") {
+                    const has = Array.from(el.options).some(o => o.value === saved[id]);
+                    if (has) el.value = saved[id];
+                } else {
+                    el.value = saved[id];
+                }
+            });
+        }
+
+        function fillSelect(sel, values, saved) {
+            sel.innerHTML = '<option value="">Semua Tanggal</option>' +
+                values.map(t => '<option value="' + esc(t) + '">' + esc(formatTanggal(t)) + "</option>").join("");
+            if (saved && Array.from(sel.options).some(o => o.value === saved)) sel.value = saved;
+        }
+
+        async function fetchWithTimeout(url, ms) {
             const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), 15000);
+            const timer = setTimeout(() => controller.abort(), ms);
+            try {
+                return await fetch(url, { cache: "no-store", signal: controller.signal });
+            } finally {
+                clearTimeout(timer);
+            }
+        }
+
+        async function fetchCsvText() {
+            const bust = Date.now();
+            try {
+                const res = await fetchWithTimeout(DATA_API + "?t=" + bust, 12000);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && Array.isArray(data.records) && data.records.length) {
+                        if (data.generatedAt) {
+                            try { sheetTimeStr = fmtDateTime(new Date(data.generatedAt)); } catch (e) {}
+                        }
+                        return { records: data.records };
+                    }
+                }
+            } catch (e) { /* fall through to sheet */ }
             let res;
             try {
-                res = await fetch(SHEET_URL, { cache: "no-store", signal: controller.signal });
+                res = await fetchWithTimeout(SHEET_URL + "&t=" + bust, 15000);
             } catch (err) {
-                clearTimeout(timer);
                 throw new Error(err.name === "AbortError"
                     ? "Waktu pengambilan data habis. Coba lagi."
                     : "Gagal terhubung ke Google Sheets.");
             }
-            clearTimeout(timer);
             if (!res.ok) throw new Error("Gagal mengambil data sheet (HTTP " + res.status + ")");
             try {
                 const hdr = res.headers.get("Date");
@@ -536,7 +680,25 @@
             const rows = parseCSV(csv);
             if (rows.length < 2) throw new Error("Tidak ada data di sheet.");
             const header = rows[0];
-            const records = rows.slice(1).map(r => rowToObject(header, r));
+            return { records: rows.slice(1).map(r => rowToObject(header, r)) };
+        }
+
+        async function loadReport(opts) {
+            if (loadInFlight) return;
+            loadInFlight = true;
+            const silent = opts && opts.silent;
+            const saved = silent ? saveFilters() : null;
+            const prevRecords = allRecords.slice();
+            try {
+            const fetched = await fetchCsvText();
+            const records = fetched.records;
+            const fp = fingerprint(records);
+            if (silent && fp === lastFingerprint) {
+                loadInFlight = false;
+                return;
+            }
+            const changed = silent ? collectChangedIds(prevRecords, records) : [];
+            lastFingerprint = fp;
             allRecords = records;
 
             const pending = records.filter(r =>
@@ -545,7 +707,7 @@
             pendingRecords = pending;
 
             const internal = records.filter(r =>
-                r["Tanggal"] !== "" && r["Pemenang"] !== "" && r["Internal"].toUpperCase() === "TRUE"
+                r["Tanggal"] !== "" && r["Pemenang"] !== "" && String(r["Internal"] || "").toUpperCase() === "TRUE"
             );
             internalRecords = internal;
 
@@ -562,36 +724,47 @@
             KELAS.forEach(k => { totalCount[k] = 0; winners[k] = 0; allTotal[k] = 0; });
             records.forEach(r => {
                 if (r["Tanggal"] !== "" && KELAS.includes(r["Kelas"])) allTotal[r["Kelas"]]++;
-                if (r["Pemenang"] !== "" && r["Internal"].toUpperCase() === "TRUE" && KELAS.includes(r["Kelas"])) winners[r["Kelas"]]++;
+                if (r["Pemenang"] !== "" && String(r["Internal"] || "").toUpperCase() === "TRUE" && KELAS.includes(r["Kelas"])) winners[r["Kelas"]]++;
             });
             KELAS.forEach(k => { totalCount[k] = allTotal[k]; });
 
             const tanggals = [...new Set(internal.map(r => r["Tanggal"]).filter(Boolean))].sort((a, b) =>
                 parseDate(a) - parseDate(b)
             );
-            const tgSel = document.getElementById("fltTanggal");
-            tgSel.innerHTML = '<option value="">Semua Tanggal</option>' +
-                tanggals.map(t => '<option value="' + esc(t) + '">' + esc(formatTanggal(t)) + "</option>").join("");
+            fillSelect(document.getElementById("fltTanggal"), tanggals, saved && saved.fltTanggal);
 
             const pendTanggals = [...new Set(pending.map(r => r["Tanggal"]).filter(Boolean))].sort((a, b) =>
                 parseDate(a) - parseDate(b)
             );
-            const ptSel = document.getElementById("fltPendTanggal");
-            ptSel.innerHTML = '<option value="">Semua Tanggal</option>' +
-                pendTanggals.map(t => '<option value="' + esc(t) + '">' + esc(formatTanggal(t)) + "</option>").join("");
+            fillSelect(document.getElementById("fltPendTanggal"), pendTanggals, saved && saved.fltPendTanggal);
 
             const specTanggals = [...new Set(special.map(r => r["Tanggal"]).filter(Boolean))].sort((a, b) =>
                 parseDate(a) - parseDate(b)
             );
-            const stSel = document.getElementById("fltSpecTanggal");
-            stSel.innerHTML = '<option value="">Semua Tanggal</option>' +
-                specTanggals.map(t => '<option value="' + esc(t) + '">' + esc(formatTanggal(t)) + "</option>").join("");
+            fillSelect(document.getElementById("fltSpecTanggal"), specTanggals, saved && saved.fltSpecTanggal);
+
+            if (saved) restoreFilters(saved);
 
             render(pending, totalLomba, totalCount, winners, allTotal);
             renderWinners();
             renderInternal();
             renderPending();
             renderSpecial();
+
+            if (silent && changed.length) {
+                flashRows(changed);
+                showToast("Data diperbarui (" + changed.length + ")");
+                document.querySelectorAll(".card").forEach(el => {
+                    el.classList.remove("num-flash");
+                    void el.offsetWidth;
+                    el.classList.add("num-flash");
+                });
+            }
+            const errBox = document.getElementById("errorBox");
+            if (errBox) { errBox.hidden = true; errBox.textContent = ""; }
+            } finally {
+                loadInFlight = false;
+            }
         }
 
         function render(pending, totalLomba, totalCount, winners, allTotal) {
@@ -614,9 +787,10 @@
                     : "0") + "</td></tr>"
             ).join("");
 
-            document.getElementById("generatedAt").textContent =
+            document.getElementById("generatedAt").innerHTML =
                 "Evoke - Reventra (01-10 Oct 2026). Diperbarui : " +
-                (sheetTimeStr || fmtDateTime(new Date()));
+                esc(sheetTimeStr || fmtDateTime(new Date())) +
+                '<span class="live-dot"></span><span class="live-label">LIVE</span>';
         }
 
         function card(num, label, cls, gotoId) {
@@ -662,7 +836,7 @@
 
         function showWinnersByName(name) {
             const list = allRecords.filter(r =>
-                r["Pemenang"] === name && r["Internal"].toUpperCase() === "TRUE"
+                r["Pemenang"] === name && String(r["Internal"] || "").toUpperCase() === "TRUE"
             ).sort(byDateAsc);
 
             document.getElementById("modalHead").innerHTML =
@@ -681,7 +855,7 @@
 
         function showWinners(kelas) {
             const list = allRecords.filter(r =>
-                r["Pemenang"] !== "" && r["Internal"].toUpperCase() === "TRUE" && r["Kelas"] === kelas
+                r["Pemenang"] !== "" && String(r["Internal"] || "").toUpperCase() === "TRUE" && r["Kelas"] === kelas
             ).sort(byDateAsc);
 
             document.getElementById("modalHead").innerHTML =
@@ -863,11 +1037,23 @@
                 if (e.key === "Escape") hideWinners();
             });
 
-            loadReport().catch(err => {
+            function startPolling() {
+                if (pollTimer) clearInterval(pollTimer);
+                pollTimer = setInterval(function () {
+                    if (document.hidden) return;
+                    loadReport({ silent: true }).catch(function () {});
+                }, POLL_MS);
+            }
+            document.addEventListener("visibilitychange", function () {
+                if (!document.hidden) loadReport({ silent: true }).catch(function () {});
+            });
+            window.loadReport = loadReport;
+            loadReport().then(startPolling).catch(err => {
                 const box = document.getElementById("errorBox");
                 box.hidden = false;
                 box.textContent = "Gagal memuat laporan: " + err.message;
                 document.getElementById("generatedAt").textContent = "";
+                startPolling();
             });
         })();
     </script>
@@ -915,7 +1101,12 @@
             if (!btn) return;
             btn.addEventListener("click", function () {
                 btn.classList.add("spin");
-                setTimeout(function () { location.reload(); }, 300);
+                var done = function () { setTimeout(function () { btn.classList.remove("spin"); }, 400); };
+                if (typeof loadReport === "function") {
+                    loadReport({ silent: true }).then(done).catch(function () { location.reload(); });
+                } else {
+                    setTimeout(function () { location.reload(); }, 300);
+                }
             });
         })();
     </script>

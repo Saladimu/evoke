@@ -427,7 +427,7 @@ input{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:13
   }
 
   async function fetchScores(){
-    const res=await fetch(SCORES_API,{cache:'no-store'});
+    const res=await fetch(SCORES_API+(SCORES_API.indexOf('?')>=0?'&':'?')+'t='+Date.now(),{cache:'no-store'});
     const data=await res.json().catch(()=>({}));
     if(!res.ok) throw new Error(data.error||'Gagal memuat leaderboard');
     return Array.isArray(data.scores)?data.scores:[];
@@ -481,6 +481,16 @@ input{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:13
   $('leaderBtn').addEventListener('click',()=>{renderLeaderboard();show('leaderboard')});
   $('resultLeaderBtn').addEventListener('click',()=>{renderLeaderboard();show('leaderboard')});
   $('backBtn').addEventListener('click',()=>show('home'));
+  setInterval(()=>{
+    if(document.hidden) return;
+    const board=$('leaderboard');
+    if(board && !board.classList.contains('hidden')) renderLeaderboard();
+  },15000);
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden) return;
+    const board=$('leaderboard');
+    if(board && !board.classList.contains('hidden')) renderLeaderboard();
+  });
 })();
 </script>
     <script>

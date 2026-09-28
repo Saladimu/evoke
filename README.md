@@ -59,7 +59,7 @@ Note: No hint or instruction about this gesture is shown anywhere in the UI.
 
 ## Live Score Report ([`index.html`](index.html))
 
-The report page renders a summary dashboard plus three match tables, all computed client-side from the published Google Sheet CSV (fetched with `cache: "no-store"` so it always pulls the latest data; note that Google's published CSV endpoint can lag by a couple of minutes after an edit).
+The report page renders a summary dashboard plus three match tables, all computed client-side from the published Google Sheet CSV. Data is fetched with `cache: "no-store"` (via `/API/data` when available, otherwise the sheet CSV directly) and **auto-refreshes every 20 seconds** while the tab is visible. When rows change, the page flashes the updated rows and shows a short toast. The refresh button re-fetches live data without a full page reload. Note that Google's published CSV endpoint can lag by a couple of minutes after an edit.
 
 The header line **Evoke - Reventra (01-10 Oct 2026). Diperbarui : `dd-Mmm-yy, HH:mm:ss`** is shown in bold and uses the **Google Sheet CSV time** — taken from the response `Date` header of the CSV fetch (e.g. `21-Aug-26, 04:10:15`), falling back to the current local time if that header is unavailable.
 
@@ -105,7 +105,7 @@ Dates are displayed in **`DD-Mmm`** format (e.g. `05-Oct`) in all three tables a
 
 - **Static hosting on the edge**: The site is served entirely from Cloudflare's global edge network. Visitors never see the underlying GitHub repository.
 - **Live data via embedded apps**:
-  - The report in [`index.html`](index.html) fetches and parses the published Google Sheet CSV directly in the browser (the published CSV endpoint sends `Access-Control-Allow-Origin: *`, so no proxy is required).
+  - The report in [`index.html`](index.html) prefers `/API/data` (Cloudflare Pages Function that re-fetches the sheet with no cache) and falls back to the published Google Sheet CSV in the browser. The page polls every 20 seconds so sheet edits appear without a reload.
   - The calendar in [`events.html`](events.html) is powered by an AppSheet app.
   - Feedback in [`feedback.html`](feedback.html) is collected through a Tally form.
 - **Champion scores**: [`game.html`](game.html) reads and writes the shared leaderboard through `/API/scores`.
@@ -115,7 +115,7 @@ Dates are displayed in **`DD-Mmm`** format (e.g. `05-Oct`) in all three tables a
 
 ```text
 .
-├── index.html            # Live Score Report (fetches Google Sheet CSV directly)
+├── index.html            # Live Score Report (auto-refreshes from Google Sheet)
 ├── events.html           # Calendar page (AppSheet embed)
 ├── feedback.html         # Feedback page (Tally form embed)
 ├── game.html             # EVOKE Champion mini-game + shared leaderboard
@@ -125,7 +125,7 @@ Dates are displayed in **`DD-Mmm`** format (e.g. `05-Oct`) in all three tables a
 ├── desktop-wall.png      # Dark-mode wallpaper used on wider screens
 └── functions/
     └── API/
-        ├── data.js       # Optional Cloudflare Pages Function (currently unused by the report)
+        ├── data.js       # Live sheet proxy (GET /API/data, no-store) used by the report
         └── scores.js     # Shared Champion leaderboard (GET/POST /API/scores)
 ```
 

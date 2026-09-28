@@ -55,9 +55,16 @@ function rowToObject(header, row) {
   return obj;
 }
 
+function isTrue(v) {
+  return String(v || "").toUpperCase() === "TRUE";
+}
+
 export async function onRequest(context) {
   try {
-    const res = await fetch(SHEET_URL);
+    const res = await fetch(SHEET_URL + "&t=" + Date.now(), {
+      cache: "no-store",
+      cf: { cacheTtl: 0, cacheEverything: false },
+    });
     if (!res.ok) {
       return new Response(
         JSON.stringify({ error: `Failed to fetch sheet: ${res.status}` }),
@@ -78,6 +85,7 @@ export async function onRequest(context) {
 
     const pending = records.filter(
       (r) =>
+        r["Tanggal"] !== "" &&
         r["Pemenang"] === "" &&
         r["Tim-1"] !== "" &&
         r["Tim-2"] !== ""
@@ -87,7 +95,7 @@ export async function onRequest(context) {
       (r) =>
         r["Tanggal"] !== "" &&
         r["Pemenang"] !== "" &&
-        r["Internal"].toUpperCase() === "TRUE"
+        isTrue(r["Internal"])
     );
 
     const totalCount = {};
@@ -101,7 +109,7 @@ export async function onRequest(context) {
       if (r["Tanggal"] !== "" && KELAS.includes(r["Kelas"])) {
         totalCount[r["Kelas"]]++;
       }
-      if (r["Pemenang"] !== "" && KELAS.includes(r["Kelas"])) {
+      if (r["Pemenang"] !== "" && isTrue(r["Internal"]) && KELAS.includes(r["Kelas"])) {
         winners[r["Kelas"]]++;
       }
     });
@@ -112,13 +120,15 @@ export async function onRequest(context) {
       totalLomba: totalLomba.length,
       totalCount,
       winners,
+      records,
     };
 
     return new Response(JSON.stringify(report), {
       headers: {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
-        "Cache-Control": "no-store",
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        Pragma: "no-cache",
       },
     });
   } catch (err) {

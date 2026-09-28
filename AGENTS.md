@@ -45,16 +45,19 @@ localStorage keys (do not rename):
 - `evoke-theme` — `"dark"` or `"light"`
 - `evoke-extra-menu` — `"1"` or `"0"`
 - `evokePlayerName` — game player name only
+- `evoke-sheet-cache` — last known good `/API/data` payload (records, ETag, `sheetDate`) for instant paint. Do not rename.
 
 ## Live scores (`index.html`)
 
 Data must keep appearing on the web when the sheet changes.
 
-- Prefer `GET /API/data?t=<timestamp>` with `cache: "no-store"`. Fall back to the published Google Sheet CSV URL with a cache-bust query param.
+- Fetch `/API/data` (`cache: "no-store"`) and the published Google Sheet CSV in parallel, racing them with `Promise.any` under a single ~10s abort budget. The sheet fetch starts after a short hedge delay (~2.5s) so the API normally wins. Send the stored ETag via `If-None-Match`; a 304 means nothing changed, so skip re-render.
 - Do not hardcode a new sheet URL unless the user provides it. The current URL is in `index.html` and `functions/API/data.js`; keep them the same.
 - Poll about every 20 seconds while the tab is visible. Skip polls when `document.hidden`. Fetch again on `visibilitychange` when the tab becomes visible.
+- On first paint, render the last good payload from `evoke-sheet-cache` immediately, then refresh in the background. Only show the error box when there is no cached payload to fall back on.
+- Persist each successful payload (records, ETag, `sheetDate`) to `evoke-sheet-cache` so a cold load shows data instantly.
 - On silent refresh: preserve filter values, skip re-render if the fingerprint is unchanged, flash changed rows, show the toast.
-- Refresh button on this page must call `loadReport({ silent: true, force: true })`, never `location.reload()`. A force refresh always re-fetches from the source, re-renders even when unchanged, and toasts "Data diperbarui (n)" or "Data sudah terbaru".
+- Refresh button on this page must call `loadReport({ silent: true, force: true })`, never `location.reload()`. A force refresh sends `?refresh=1` (and skips the client `If-None-Match`) so it bypasses the function's short-lived edge cache and re-fetches from the source, re-renders even when unchanged, and toasts "Data diperbarui (n)" or "Data sudah terbaru".
 - Guard concurrent loads with a shared `loadPromise`. Non-forced callers reuse the in-flight promise; a forced call waits for it, then fetches again.
 - Treat `Internal` as true only when `String(value).toUpperCase() === "TRUE"`.
 - Stats card rules:
@@ -71,8 +74,9 @@ Google's published CSV can lag a few minutes after an edit. Do not "fix" that wi
 ## Pages Functions
 
 - Cloudflare Pages maps `functions/API/data.js` to `/API/data` (capital `API`). Do not rename the folder.
-- Always send `Cache-Control: no-store` (and CORS `*`) on API responses.
-- `data.js` must re-fetch the sheet with cache disabled and return `{ generatedAt, sheetDate, pendingCount, totalLomba, totalCount, winners, records }`. `sheetDate` is the upstream Google `Date` header (the time the sheet snapshot was served) so the UI shows a consistent "Diperbarui" time.
+- Send CORS `*` on API responses. Error responses use `Cache-Control: no-store`; success responses are edge-cacheable (see below).
+- `data.js` re-fetches the sheet with cache disabled and returns `{ ts, etag, generatedAt, sheetDate, pendingCount, totalLomba, totalCount, winners, records }`. `sheetDate` is the upstream Google `Date` header (the time the sheet snapshot was served) so the UI shows a consistent "Diperbarui" time.
+- `data.js` keeps a SHA-1 ETag and a `caches.default` edge entry (`CACHE_URL="https://evoke2.internal/API/data"`): `FRESH_MS=10000` returns cached, `STALE_MS=40000` serves stale then revalidates via `waitUntil`, and `If-None-Match` matching the ETag returns 304. A request with `?refresh=1` skips the edge entry entirely and rebuilds from the sheet. Success responses use `CACHE_CONTROL="public, max-age=0, s-maxage=10, stale-while-revalidate=30"` and an `X-Cache` header (`HIT` / `STALE` / `MISS` / `REVALIDATED` / `ERROR-STALE`).
 - Never combine `fetch(url, { cache: "no-store" })` with `cf: { cacheTtl: 0 }` — Cloudflare throws `CacheTtl: 0, is not compatible with cache: no-store header` and the function returns 500. Use `cache: "no-store"` alone.
 - `scores.js`: names max 24 chars, strip `<>`, integer scores 0..50000, one best score per name, top 20 on GET. Scores persist in the Workers KV namespace **`Evoke2_scores`**, bound to the Pages project as `SCORES`; fall back to the in-memory store only when the binding is absent.
 - Do not log or commit secrets. KV is bound in the Cloudflare dashboard, not in this repo.

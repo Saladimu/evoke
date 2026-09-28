@@ -451,6 +451,9 @@
         const DATA_API = "/API/data";
         const KELAS = ["SD", "SMP", "SMA", "Gabungan"];
         const POLL_MS = 20000;
+        const CACHE_KEY = "evoke-sheet-cache";
+        const FETCH_BUDGET_MS = 10000;
+        const HEDGE_MS = 2500;
         let internalRecords = [];
         let pendingRecords = [];
         let specialRecords = [];
@@ -639,49 +642,87 @@
             if (saved && Array.from(sel.options).some(o => o.value === saved)) sel.value = saved;
         }
 
-        async function fetchWithTimeout(url, ms) {
-            const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), ms);
+        function readStored() {
             try {
-                return await fetch(url, { cache: "no-store", signal: controller.signal });
-            } finally {
-                clearTimeout(timer);
-            }
+                const raw = localStorage.getItem(CACHE_KEY);
+                if (!raw) return null;
+                const obj = JSON.parse(raw);
+                if (obj && Array.isArray(obj.records) && obj.records.length) return obj;
+            } catch (e) {}
+            return null;
         }
 
-        async function fetchCsvText() {
-            const bust = Date.now();
+        function writeStored(records, etag, sheetDate) {
             try {
-                const res = await fetchWithTimeout(DATA_API + "?t=" + bust, 12000);
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data && Array.isArray(data.records) && data.records.length) {
-                        const stamp = data.sheetDate || data.generatedAt;
-                        if (stamp) {
-                            try { sheetTimeStr = fmtDateTime(new Date(stamp)); } catch (e) {}
-                        }
-                        return { records: data.records };
-                    }
-                }
-            } catch (e) { /* fall through to sheet */ }
-            let res;
-            try {
-                res = await fetchWithTimeout(SHEET_URL + "&t=" + bust, 15000);
-            } catch (err) {
-                throw new Error(err.name === "AbortError"
-                    ? "Waktu pengambilan data habis. Coba lagi."
-                    : "Gagal terhubung ke Google Sheets.");
+                localStorage.setItem(CACHE_KEY, JSON.stringify({
+                    ts: Date.now(),
+                    etag: etag || "",
+                    sheetDate: sheetDate || "",
+                    records: records
+                }));
+            } catch (e) {}
+        }
+
+        function delay(ms) {
+            return new Promise(function (resolve) { setTimeout(resolve, ms); });
+        }
+
+        async function apiSource(signal, force) {
+            const stored = readStored();
+            const headers = {};
+            if (!force && stored && stored.etag) headers["If-None-Match"] = stored.etag;
+            const url = force ? DATA_API + "?refresh=1&t=" + Date.now() : DATA_API;
+            const res = await fetch(url, { cache: "no-store", headers: headers, signal: signal });
+            if (res.status === 304) {
+                return { notModified: true, etag: (stored && stored.etag) || "", source: "api" };
             }
+            if (!res.ok) throw new Error("API HTTP " + res.status);
+            const data = await res.json();
+            if (!data || !Array.isArray(data.records) || !data.records.length) {
+                throw new Error("Data API kosong.");
+            }
+            return {
+                records: data.records,
+                etag: res.headers.get("ETag") || data.etag || "",
+                sheetDate: data.sheetDate || data.generatedAt || "",
+                source: "api"
+            };
+        }
+
+        async function sheetSource(signal) {
+            const res = await fetch(SHEET_URL + "&t=" + Date.now(), { cache: "no-store", signal: signal });
             if (!res.ok) throw new Error("Gagal mengambil data sheet (HTTP " + res.status + ")");
-            try {
-                const hdr = res.headers.get("Date");
-                if (hdr) sheetTimeStr = fmtDateTime(new Date(hdr));
-            } catch (e) { /* ignore header parse errors */ }
+            const hdr = res.headers.get("Date") || "";
             const csv = await res.text();
             const rows = parseCSV(csv);
             if (rows.length < 2) throw new Error("Tidak ada data di sheet.");
             const header = rows[0];
-            return { records: rows.slice(1).map(r => rowToObject(header, r)) };
+            return {
+                records: rows.slice(1).map(function (r) { return rowToObject(header, r); }),
+                etag: "",
+                sheetDate: hdr,
+                source: "sheet"
+            };
+        }
+
+        async function fetchCsvText(opts) {
+            const force = !!(opts && opts.force);
+            const ac = new AbortController();
+            const budget = setTimeout(function () { ac.abort(); }, FETCH_BUDGET_MS);
+            try {
+                const apiPromise = apiSource(ac.signal, force);
+                const sheetPromise = delay(HEDGE_MS).then(function () { return sheetSource(ac.signal); });
+                try {
+                    return await Promise.any([apiPromise, sheetPromise]);
+                } catch (agg) {
+                    const errs = (agg && agg.errors) ? agg.errors : [];
+                    const real = errs.filter(function (e) { return e && e.name !== "AbortError"; })[0] || errs[0];
+                    throw real || agg;
+                }
+            } finally {
+                clearTimeout(budget);
+                ac.abort();
+            }
         }
 
         async function loadReport(opts) {
@@ -694,22 +735,9 @@
             return loadPromise;
         }
 
-        async function doLoadReport(o) {
-            const silent = !!o.silent;
-            const force = !!o.force;
-            const saved = (silent || force) ? saveFilters() : null;
-            const prevRecords = allRecords.slice();
-            try {
-            const fetched = await fetchCsvText();
-            const records = fetched.records;
-            const fp = fingerprint(records);
-            const unchanged = lastFingerprint !== "" && fp === lastFingerprint;
-            if (silent && !force && unchanged) {
-                return { status: "unchanged", changed: 0 };
-            }
-            const changed = collectChangedIds(prevRecords, records);
-            lastFingerprint = fp;
-            allRecords = records;
+        function applyRecords(records, ctx) {
+            const saved = ctx.saved;
+            const changed = ctx.changed || [];
 
             const pending = records.filter(r =>
                 r["Tanggal"] !== "" && r["Pemenang"] === "" && r["Tim-1"] !== "" && r["Tim-2"] !== ""
@@ -760,29 +788,52 @@
             renderInternal();
             renderPending();
             renderSpecial();
+            renderTimestamp();
 
-            if (silent && changed.length) {
+            if ((ctx.silent && changed.length) || (ctx.force && changed.length)) {
                 flashRows(changed);
-                showToast("Data diperbarui (" + changed.length + ")");
                 document.querySelectorAll(".card").forEach(el => {
                     el.classList.remove("num-flash");
                     void el.offsetWidth;
                     el.classList.add("num-flash");
                 });
+                showToast("Data diperbarui (" + changed.length + ")");
+            } else if (ctx.force) {
+                showToast("Data sudah terbaru");
             }
-            if (force) {
-                if (changed.length) {
-                    flashRows(changed);
-                    document.querySelectorAll(".card").forEach(el => {
-                        el.classList.remove("num-flash");
-                        void el.offsetWidth;
-                        el.classList.add("num-flash");
-                    });
-                    showToast("Data diperbarui (" + changed.length + ")");
-                } else {
-                    showToast("Data sudah terbaru");
-                }
+        }
+
+        async function doLoadReport(o) {
+            const silent = !!o.silent;
+            const force = !!o.force;
+            const saved = (silent || force) ? saveFilters() : null;
+            const prevRecords = allRecords.slice();
+            try {
+            const fetched = await fetchCsvText({ force: force });
+
+            if (fetched.notModified) {
+                const stored = readStored();
+                const stamp = (stored && stored.sheetDate) || "";
+                if (stamp) { try { sheetTimeStr = fmtDateTime(new Date(stamp)); } catch (e) {} }
+                renderTimestamp();
+                if (force) showToast("Data sudah terbaru");
+                return { status: "unchanged", changed: 0 };
             }
+
+            const records = fetched.records;
+            const fp = fingerprint(records);
+            const unchanged = lastFingerprint !== "" && fp === lastFingerprint;
+            if (fetched.sheetDate) { try { sheetTimeStr = fmtDateTime(new Date(fetched.sheetDate)); } catch (e) {} }
+            if (silent && !force && unchanged) {
+                renderTimestamp();
+                return { status: "unchanged", changed: 0 };
+            }
+            const changed = collectChangedIds(prevRecords, records);
+            lastFingerprint = fp;
+            allRecords = records;
+            writeStored(records, fetched.etag, fetched.sheetDate);
+
+            applyRecords(records, { saved: saved, changed: changed, silent: silent, force: force });
             const errBox = document.getElementById("errorBox");
             if (errBox) { errBox.hidden = true; errBox.textContent = ""; }
             return { status: changed.length ? "changed" : "unchanged", changed: changed.length };
@@ -793,6 +844,23 @@
                 }
                 throw err;
             }
+        }
+
+        function renderTimestamp() {
+            document.getElementById("generatedAt").innerHTML =
+                "Evoke - Reventra (01-10 Oct 2026). Diperbarui : " +
+                esc(sheetTimeStr || fmtDateTime(new Date())) +
+                '<span class="live-dot"></span><span class="live-label">LIVE</span>';
+        }
+
+        function renderFromCache() {
+            const stored = readStored();
+            if (!stored) return false;
+            allRecords = stored.records;
+            lastFingerprint = fingerprint(stored.records);
+            if (stored.sheetDate) { try { sheetTimeStr = fmtDateTime(new Date(stored.sheetDate)); } catch (e) {} }
+            applyRecords(stored.records, { saved: null, changed: [], silent: false, force: false });
+            return true;
         }
 
         function render(pending, totalLomba, totalCount, winners, allTotal) {
@@ -814,11 +882,6 @@
                     ? '<span class="winner-link" data-kelas="' + esc(k) + '" data-mode="winner">' + winners[k] + "</span>"
                     : "0") + "</td></tr>"
             ).join("");
-
-            document.getElementById("generatedAt").innerHTML =
-                "Evoke - Reventra (01-10 Oct 2026). Diperbarui : " +
-                esc(sheetTimeStr || fmtDateTime(new Date())) +
-                '<span class="live-dot"></span><span class="live-label">LIVE</span>';
         }
 
         function card(num, label, cls, gotoId) {
@@ -1076,11 +1139,14 @@
                 if (!document.hidden) loadReport({ silent: true }).catch(function () {});
             });
             window.loadReport = loadReport;
+            const hadCache = renderFromCache();
             loadReport().then(startPolling).catch(err => {
-                const box = document.getElementById("errorBox");
-                box.hidden = false;
-                box.textContent = "Gagal memuat laporan: " + err.message;
-                document.getElementById("generatedAt").textContent = "";
+                if (!hadCache) {
+                    const box = document.getElementById("errorBox");
+                    box.hidden = false;
+                    box.textContent = "Gagal memuat laporan: " + err.message;
+                    document.getElementById("generatedAt").textContent = "";
+                }
                 startPolling();
             });
         })();

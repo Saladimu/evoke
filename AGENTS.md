@@ -72,12 +72,15 @@ Google's published CSV can lag a few minutes after an edit. Do not "fix" that wi
 
 - Cloudflare Pages maps `functions/API/data.js` to `/API/data` (capital `API`). Do not rename the folder.
 - Always send `Cache-Control: no-store` (and CORS `*`) on API responses.
-- `data.js` must re-fetch the sheet with cache disabled and return `{ generatedAt, pendingCount, totalLomba, totalCount, winners, records }`.
-- `scores.js`: names max 24 chars, strip `<>`, integer scores 0..50000, one best score per name, top 20 on GET. Prefer KV binding `SCORES`; fall back to in-memory store.
+- `data.js` must re-fetch the sheet with cache disabled and return `{ generatedAt, sheetDate, pendingCount, totalLomba, totalCount, winners, records }`. `sheetDate` is the upstream Google `Date` header (the time the sheet snapshot was served) so the UI shows a consistent "Diperbarui" time.
+- Never combine `fetch(url, { cache: "no-store" })` with `cf: { cacheTtl: 0 }` — Cloudflare throws `CacheTtl: 0, is not compatible with cache: no-store header` and the function returns 500. Use `cache: "no-store"` alone.
+- `scores.js`: names max 24 chars, strip `<>`, integer scores 0..50000, one best score per name, top 20 on GET. Scores persist in the Workers KV namespace **`Evoke2_scores`**, bound to the Pages project as `SCORES`; fall back to the in-memory store only when the binding is absent.
 - Do not log or commit secrets. KV is bound in the Cloudflare dashboard, not in this repo.
 
 ## Game (`game.html`)
 
+- Live leaderboard page: https://evoke2.pages.dev/game
+- Leaderboard scores must persist in Workers KV namespace `Evoke2_scores` (binding `SCORES`), so they survive deploys and are shared across all visitors of https://evoke2.pages.dev/game.
 - POST finished scores to `/API/scores`. GET leaderboard with `cache: "no-store"` and a cache-bust query.
 - Poll the leaderboard about every 15 seconds only while that view is visible.
 - Require a name before start. Persist it in `evokePlayerName`.

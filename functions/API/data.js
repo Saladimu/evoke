@@ -63,7 +63,6 @@ export async function onRequest(context) {
   try {
     const res = await fetch(SHEET_URL + "&t=" + Date.now(), {
       cache: "no-store",
-      cf: { cacheTtl: 0, cacheEverything: false },
     });
     if (!res.ok) {
       return new Response(
@@ -72,6 +71,7 @@ export async function onRequest(context) {
       );
     }
     const csv = await res.text();
+    const sheetDate = res.headers.get("Date");
     const rows = parseCSV(csv);
     if (rows.length < 2) {
       return new Response(JSON.stringify({ error: "No data rows found" }), {
@@ -116,6 +116,7 @@ export async function onRequest(context) {
 
     const report = {
       generatedAt: new Date().toISOString(),
+      sheetDate,
       pendingCount: pending.length,
       totalLomba: totalLomba.length,
       totalCount,

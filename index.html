@@ -656,8 +656,9 @@
                 if (res.ok) {
                     const data = await res.json();
                     if (data && Array.isArray(data.records) && data.records.length) {
-                        if (data.generatedAt) {
-                            try { sheetTimeStr = fmtDateTime(new Date(data.generatedAt)); } catch (e) {}
+                        const stamp = data.sheetDate || data.generatedAt;
+                        if (stamp) {
+                            try { sheetTimeStr = fmtDateTime(new Date(stamp)); } catch (e) {}
                         }
                         return { records: data.records };
                     }

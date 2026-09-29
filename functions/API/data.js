@@ -6,6 +6,7 @@ const KELAS = ["SD", "SMP", "SMA", "Gabungan"];
 const CACHE_URL = "https://evoke2.internal/API/data";
 const FRESH_MS = 10000;
 const STALE_MS = 40000;
+const FORCE_MIN_MS = 5000;
 const CACHE_CONTROL = "public, max-age=0, s-maxage=10, stale-while-revalidate=30";
 
 function parseCSV(text) {
@@ -210,6 +211,10 @@ export async function onRequest(context) {
 
   try {
     if (force) {
+      const cached = await readCache(cache, cacheKey);
+      if (cached && now - (cached.ts || 0) < FORCE_MIN_MS) {
+        return jsonResponse(cached, "FORCE-COOLDOWN");
+      }
       const payload = await buildPayload();
       await writeCache(cache, cacheKey, payload);
       return jsonResponse(payload, "MISS");

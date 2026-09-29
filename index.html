@@ -176,6 +176,9 @@
         .dark .theme-toggle .icon-moon { display: none; }
         .theme-toggle.spin svg { animation: spin .6s linear; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        .theme-toggle:disabled, .theme-toggle.cooldown { opacity: .4; cursor: not-allowed; }
+        .theme-toggle.cooldown:hover { background: none; }
+        .dark .theme-toggle.cooldown:hover { background: none; }
 
         .dark { color-scheme: dark; }
         .dark body { background: #121417; color: #e8e8e8; }
@@ -454,6 +457,8 @@
         const CACHE_KEY = "evoke-sheet-cache";
         const FETCH_BUDGET_MS = 10000;
         const HEDGE_MS = 2500;
+        const REFRESH_COOLDOWN_MS = 180000;
+        const REFRESH_COOLDOWN_KEY = "evoke-refresh-cooldown";
         let internalRecords = [];
         let pendingRecords = [];
         let specialRecords = [];
@@ -710,7 +715,10 @@
             const ac = new AbortController();
             const budget = setTimeout(function () { ac.abort(); }, FETCH_BUDGET_MS);
             try {
-                const apiPromise = apiSource(ac.signal, force);
+                if (force) {
+                    return await apiSource(ac.signal, true);
+                }
+                const apiPromise = apiSource(ac.signal, false);
                 const sheetPromise = delay(HEDGE_MS).then(function () { return sheetSource(ac.signal); });
                 try {
                     return await Promise.any([apiPromise, sheetPromise]);
@@ -725,8 +733,24 @@
             }
         }
 
+        function refreshCooldownRemaining() {
+            try {
+                const until = parseInt(localStorage.getItem(REFRESH_COOLDOWN_KEY) || "0", 10);
+                return Math.max(0, until - Date.now());
+            } catch (e) { return 0; }
+        }
+
+        function startRefreshCooldown() {
+            try { localStorage.setItem(REFRESH_COOLDOWN_KEY, String(Date.now() + REFRESH_COOLDOWN_MS)); } catch (e) {}
+        }
+
         async function loadReport(opts) {
             const o = opts || {};
+            if (o.force) {
+                const remain = refreshCooldownRemaining();
+                if (remain > 0) return { status: "cooldown", remaining: remain };
+                startRefreshCooldown();
+            }
             if (loadPromise) {
                 if (!o.force) return loadPromise.then(function () { return { status: "busy" }; });
                 try { await loadPromise; } catch (e) { /* wait out previous load */ }
@@ -1139,6 +1163,8 @@
                 if (!document.hidden) loadReport({ silent: true }).catch(function () {});
             });
             window.loadReport = loadReport;
+            window.evokeToast = showToast;
+            window.evokeRefreshCooldownRemaining = refreshCooldownRemaining;
             const hadCache = renderFromCache();
             loadReport().then(startPolling).catch(err => {
                 if (!hadCache) {
@@ -1193,17 +1219,68 @@
         (function () {
             var btn = document.getElementById("refreshBtn");
             if (!btn) return;
+            var tick = null;
+
+            function fmt(ms) {
+                var s = Math.ceil(ms / 1000);
+                var m = Math.floor(s / 60);
+                var r = s % 60;
+                return m + ":" + (r < 10 ? "0" : "") + r;
+            }
+
+            function remaining() {
+                return (typeof window.evokeRefreshCooldownRemaining === "function")
+                    ? window.evokeRefreshCooldownRemaining() : 0;
+            }
+
+            function render() {
+                var ms = remaining();
+                if (ms > 0) {
+                    btn.disabled = true;
+                    btn.classList.add("cooldown");
+                    btn.title = "Tunggu " + fmt(ms) + " sebelum refresh lagi";
+                } else {
+                    btn.disabled = false;
+                    btn.classList.remove("cooldown");
+                    btn.title = "Muat ulang halaman";
+                    if (tick) { clearInterval(tick); tick = null; }
+                }
+            }
+
+            function startTicker() {
+                if (tick) return;
+                tick = setInterval(render, 1000);
+            }
+
             btn.addEventListener("click", function () {
+                var ms = remaining();
+                if (ms > 0) {
+                    if (typeof window.evokeToast === "function") {
+                        window.evokeToast("Tunggu " + fmt(ms) + " sebelum refresh lagi");
+                    }
+                    return;
+                }
                 btn.classList.add("spin");
                 var done = function () { setTimeout(function () { btn.classList.remove("spin"); }, 400); };
                 if (typeof loadReport === "function") {
                     loadReport({ silent: true, force: true })
-                        .then(done)
-                        .catch(function () { done(); });
+                        .then(function (res) {
+                            done();
+                            if (res && res.status === "cooldown" && typeof window.evokeToast === "function") {
+                                window.evokeToast("Tunggu " + fmt(res.remaining) + " sebelum refresh lagi");
+                            }
+                            render();
+                        })
+                        .catch(function () { done(); render(); });
+                    startTicker();
+                    render();
                 } else {
                     setTimeout(function () { location.reload(); }, 300);
                 }
             });
+
+            render();
+            if (remaining() > 0) startTicker();
         })();
     </script>
 </body>

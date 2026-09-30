@@ -96,10 +96,10 @@ The match lists opened by clicking either column are sorted by **date ascending*
 ### Tables
 
 - **Total Lomba (Selesai)** — completed internal matches, sorted by **date + time descending**. Filters: Kelas, Tanggal, and text search.
-- **Lomba terjadwal (Pending)** — scheduled matches without a winner. Same filters as the table above, plus a PIC column.
+- **Lomba terjadwal (Pending)** — scheduled matches without a winner, sorted by **date + time ascending**. Same filters as the table above, plus a PIC column.
 - **Special Note** — matches where `Note` contains `Info:` (the `Info:` marker is stripped from the displayed note). Columns: ID-No, Lomba, Tanggal, Jam, PIC, Note. Same filters as the other tables; text search also covers PIC and Note.
 
-Dates are displayed in **`DD-Mmm`** format (e.g. `05-Oct`) in all three tables and in the Tanggal filter dropdowns. All tables are horizontally scrollable on narrow screens.
+Dates are displayed in **`DD-Mmm`** format (e.g. `05-Oct`) in all three tables and in the Tanggal filter dropdowns. The PIC column shows the **name only** (anything from the first `/` onward is dropped). All tables are horizontally scrollable on narrow screens.
 
 ## How It Works
 

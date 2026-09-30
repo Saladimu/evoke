@@ -68,7 +68,8 @@ Data must keep appearing on the web when the sheet changes.
   - Selesai: `Tanggal` filled, `Pemenang` filled, Internal TRUE
   - Special Note: `Tanggal` filled and `Note` contains `Info:`
 - Display dates as `DD-Mmm` in tables and date filters.
-- Sort completed/pending/special tables by date + start time descending. Modal match lists sort ascending.
+- Sort completed/special tables by date + start time descending; the pending table sorts ascending. Modal match lists sort ascending.
+- Display PIC as name only via `formatPIC()` (drop everything from the first `/`) in every table.
 - Mark names matching `/kemurnian/i` with the home icon via `markHome()`.
 
 Google's published CSV can lag a few minutes after an edit. Do not "fix" that with aggressive client caching.

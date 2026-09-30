@@ -544,6 +544,12 @@
             return day + "-" + mon;
         }
 
+        function formatPIC(s) {
+            const t = String(s || "").trim();
+            const i = t.indexOf("/");
+            return (i === -1 ? t : t.slice(0, i)).trim();
+        }
+
         function jamMinutes(s) {
             const m = String(s || "").trim().match(/(\d{1,2}):(\d{2})\s*([APap][Mm])?/);
             if (!m) return 0;
@@ -1027,7 +1033,7 @@
                 (!q || searchFields(r).toLowerCase().includes(q))
             );
 
-            rows = rows.slice().sort(byDateDesc);
+            rows = rows.slice().sort(cfg.sort || byDateDesc);
 
             document.getElementById(cfg.countId).textContent =
                 rows.length + " dari " + cfg.records.length + cfg.countSuffix;
@@ -1085,10 +1091,11 @@
                 countSuffix: " lomba terjadwal",
                 listId: "pendingList",
                 emptyId: "pendingEmpty",
+                sort: byDateAsc,
                 renderRow: r =>
                     "<tr><td>" + esc(r["ID-No"]) + "</td><td>" + esc(r["Deskripsi Lomba"]) + "</td><td>" +
                     markHome(r["Tim-1"]) + "</td><td>" + markHome(r["Tim-2"]) + "</td><td>" + esc(formatTanggal(r["Tanggal"])) +
-                    "</td><td>" + esc(r["Jam (mulai)"]) + "</td><td>" + esc(r["PIC"]) + "</td></tr>"
+                    "</td><td>" + esc(r["Jam (mulai)"]) + "</td><td>" + esc(formatPIC(r["PIC"])) + "</td></tr>"
             });
         }
 
@@ -1104,7 +1111,7 @@
                 emptyId: "specialEmpty",
                 renderRow: r =>
                     "<tr><td>" + esc(r["ID-No"]) + "</td><td>" + esc(r["Deskripsi Lomba"]) + "</td><td>" +
-                    esc(formatTanggal(r["Tanggal"])) + "</td><td>" + esc(r["Jam (mulai)"]) + "</td><td>" + esc(r["PIC"]) +
+                    esc(formatTanggal(r["Tanggal"])) + "</td><td>" + esc(r["Jam (mulai)"]) + "</td><td>" + esc(formatPIC(r["PIC"])) +
                     "</td><td>" + esc(String(r["Note"]).replace(/Info\s*:/gi, "")) + "</td></tr>"
             });
         }
